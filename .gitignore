@@ -1,0 +1,5 @@
+/target
+.DS_Store
+.idea/HTTPcrud.iml
+.idea/modules.xml
+.idea/vcs.xml

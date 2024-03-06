@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use super::dataType::DataType;
+use super::{dataType::DataType, finder::BNode};
 
 const ID: &str = "ID";
 
@@ -8,7 +8,7 @@ const ID: &str = "ID";
 pub type Document = HashMap<String, DataType>;
 
 
-pub trait Document_struct {
+pub trait DocumentStruct {
   fn to_document(&self) -> Document;
   fn from_document(document: &Document) -> Self;
 }
@@ -36,13 +36,19 @@ impl DocumentJson for Document {
 
     //remove last bracket
     let mut document = Document::new();
-    let mut json = json.split(',');
+    let json = json.split(',');
     for kv in json {
       println!("value: {}", kv);
       let mut kv = kv.split(':');
       let key = kv.next().unwrap().trim().replace("\"", "");
       let value = kv.next().unwrap().trim();
-      document.insert(key.to_string(), DataType::from_json(value));
+      if key == ID {
+        //TODO check if value is a number otherwise return error ? or parse not as ID
+        let value = value.parse::<u32>().unwrap();
+        document.insert(key.to_string(), DataType::Id(value));
+      } else {
+        document.insert(key.to_string(), DataType::from_json(value));
+      }
     }
     document
   
@@ -73,7 +79,8 @@ pub struct Collection {
   pub name: String,
   last_id: u32,
   pub(crate) data: Vec<Document>,
-  //idTable: HashMap<u32, usize>
+  id_table: HashMap<u32, usize>,
+  bTree: BNode
 }
 
 
@@ -84,7 +91,16 @@ impl Collection {
       name: name,
       last_id: 0,
       data: Vec::new(),
-      //idTable: HashMap::new()
+      id_table: HashMap::new(),
+      bTree: BNode::new(),
+    }
+  }
+
+  fn update_index(&mut self) {
+    self.id_table.clear();
+    for (index, document) in self.data.iter().enumerate() {
+      let id = document.get(ID).unwrap().to_id();
+      self.id_table.insert(id, index);
     }
   }
 
@@ -93,15 +109,26 @@ impl Collection {
     if !document.contains_key(ID) {
       self.last_id += 1;
       document.insert(ID.to_string(), DataType::Id(self.last_id));
+    } else {
+      let id = document.get(ID).unwrap().to_id();
+      // if id exists replace id with new id
+      if self.id_table.contains_key(&id) {
+        self.last_id += 1;
+        document.remove(ID);
+        document.insert(ID.to_string(), DataType::Id(self.last_id));
+      }
     }
+    let id = document.get(ID).unwrap().to_id();
     self.data.push(document);
-    self.last_id
+    self.id_table.insert(id, self.data.len() - 1);
+    id
   }
 
   pub fn rm(&mut self, id: u32) {
     //self.data.remove(index);
     let index = self.get_index(id);
     self.data.swap_remove(index);
+    self.update_index();
   }
 
   pub fn count(&self) -> usize {
@@ -122,13 +149,42 @@ impl Collection {
     
    }
 
-  pub fn get(&self, id: u32) -> Option<&Document> {
+  fn _find_by_key(&self, key: &str) -> Vec<&Document> {
+    self.data.iter().filter(|&x| x.contains_key(key)).collect()
+  }
+
+  fn _find_by_value(&self, key: &str, value: &DataType) -> Vec<&Document> {
+    self.data.iter().filter(|&x| x.contains_key(key) && x.get(key).unwrap() == value).collect()
+  }
+
+  pub fn find(&self, args: HashMap<String, DataType>) -> Vec<&Document> {
+    let mut result = Vec::new();
+    for (key, value) in args.iter() {
+      if key == ID {
+        let id = value.to_id();
+        let index = self.id_table.get(&id);
+        match index {
+          Some(index) => result.push(self._get(*index).unwrap()),
+          None => continue
+        }
+      } else {
+        result.append(&mut self._find_by_value(key, value));
+      }
+    }
+    result
+  }
+
+  fn slow_get(&self, id: u32) -> Option<&Document> {
     let id = DataType::Id(id);
     self.data.iter().find(|&x| x.get(ID).unwrap() == &id)
   }
 
-  pub fn remove(&mut self, index: usize) -> Document {
-    self.data.remove(index)
+  pub fn get(&self, id: u32) -> Option<&Document> {
+    let index = self.id_table.get(&id);
+    match index {
+      Some(index) => self.data.get(*index),
+      None => self.slow_get(id)
+    }
   }
 
 }
@@ -152,4 +208,3 @@ mod tests {
     assert!(collection._get(0).is_some());
   }
 }
-

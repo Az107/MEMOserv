@@ -1,5 +1,6 @@
 pub mod collection;
 pub mod dataType;
+mod finder;
 use collection::Collection;
 
 pub struct MEMOdb {
@@ -10,7 +11,7 @@ pub struct MEMOdb {
 impl MEMOdb {
     pub fn new() -> Self {
         MEMOdb {
-            version: "0.1.0",
+            version: "0.1.5",
             collections: Vec::new(),
         }
     }
@@ -55,7 +56,7 @@ mod tests {
     use std::time::Instant;
     use crate::doc;
     use crate::memodb::collection::Document;
-    use crate::memodb::collection::Document_struct;
+    use crate::memodb::collection::DocumentStruct;
     use crate::memodb::collection::DocumentJson;
 
     struct User {
@@ -63,7 +64,7 @@ mod tests {
         age: i32,
     }
 
-    impl Document_struct for User {
+    impl DocumentStruct for User {
         fn to_document(&self) -> Document {
             doc!{"name" => self.name.clone(), "age" => self.age}
         }

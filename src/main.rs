@@ -71,6 +71,7 @@ enum HttpStatus {
 pub struct HttpRequest {
     method: HttpMethod,
     path: String,
+    args: HashMap<String, String>,
     headers: HashMap<String, String>,
     body: String,
 }
@@ -88,7 +89,7 @@ fn request_parser(request: &str) -> HttpRequest {
     let first_line = lines.next().unwrap();
     let mut words = first_line.split_whitespace();
     let method = words.next().unwrap();
-    let path = words.next().unwrap();
+    let mut path = words.next().unwrap();
     let mut headers: HashMap<String, String> = HashMap::new();
     loop {
         let line = lines.next().unwrap();
@@ -102,9 +103,24 @@ fn request_parser(request: &str) -> HttpRequest {
     }
     let remaining_lines: Vec<&str>  = lines.collect();
     let body = remaining_lines.join("");
+    let mut args: HashMap<String, String> = HashMap::new();
+    if path.contains('?') {
+        let mut parts = path.split('?');
+        path = parts.next().unwrap();
+        let query = parts.next().unwrap();
+        let query_parts: Vec<&str> = query.split('&').collect();
+        for part in query_parts {
+            let mut parts = part.split('=');
+            let key = parts.next().unwrap().to_string();
+            let value = parts.next().unwrap().to_string().replace("%22", "\"");
+            args.insert(key, value);
+        }
+    }
+
     HttpRequest {
         method: HttpMethod::from_str(method),
         path: path.to_string(),
+        args: args,
         headers: headers,
         body: body.trim_end().to_string(),
     }

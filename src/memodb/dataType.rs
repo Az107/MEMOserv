@@ -75,7 +75,7 @@ impl DataType {
     } else {
       match json.parse::<i32>() {
         Ok(number) => DataType::Number(number),
-        Err(_) => DataType::Id(json.parse::<u32>().unwrap()),
+        Err(_) => DataType::Text(json.to_string()),
       }
     }
   }

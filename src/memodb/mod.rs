@@ -16,18 +16,20 @@ impl MEMOdb {
         }
     }
 
-    pub fn create_collection(&mut self, name: String) {
-        let collection = Collection::new(name);
-        self.collections.push(collection);
+    pub fn create_collection(&mut self, name: String) -> Result<(), &str>{
+        //check if collection exists
+        if self.collections.iter().any(|x| x.name == name) {
+            Err("Collection already exists")
+        } else {
+            let collection = Collection::new(name);
+            self.collections.push(collection);
+            Ok(())
+        }
     }
 
     pub fn get_collection(&mut self, name: String) -> Option<&mut Collection> {
         //return a mutable reference to collection
         self.collections.iter_mut().find(|x| x.name == name)
-    }
-
-    pub fn get_all_collections(&self) -> &Vec<Collection> {
-        &self.collections
     }
 
     pub fn get_collection_list(&self) -> Vec<String> {
@@ -38,7 +40,7 @@ impl MEMOdb {
         collection_list
     }
 
-    fn remove_collection(&mut self, name: String) -> Collection {
+    pub fn remove_collection(&mut self, name: String) -> Collection {
         let index = self
             .collections
             .iter()
@@ -89,7 +91,7 @@ mod tests {
         assert_eq!(memodb.collections[1].name, "posts");
         assert_eq!(memodb.get_collection("users".to_string()).unwrap().name, "users");
         assert_eq!(memodb.get_collection("posts".to_string()).unwrap().name, "posts");
-        assert_eq!(memodb.get_all_collections().len(), 2);
+        assert_eq!(memodb.get_collection_list().len(), 2);
         assert_eq!(memodb.remove_collection("users".to_string()).name, "users");
         assert_eq!(memodb.collections.len(), 1);
         assert_eq!(memodb.remove_collection("posts".to_string()).name, "posts");
@@ -100,7 +102,7 @@ mod tests {
     fn add_document() {
         let mut memodb = crate::memodb::MEMOdb::new();
         memodb.create_collection("users".to_string());
-        let mut collection = memodb.get_collection("users".to_string()).unwrap();
+        let collection = memodb.get_collection("users".to_string()).unwrap();
         collection.add(doc!{"name" => "John", "age" => 30});
         collection.add(doc!{"name" => "Jane", "age" => 25});
         assert_eq!(collection.count(), 2);
@@ -113,7 +115,7 @@ mod tests {
     fn add_document_from_struct() {
         let mut memodb = crate::memodb::MEMOdb::new();
         memodb.create_collection("users".to_string());
-        let mut collection = memodb.get_collection("users".to_string()).unwrap();
+        let collection = memodb.get_collection("users".to_string()).unwrap();
         let user = User {
             name: "John".to_string(),
             age: 30,
@@ -135,7 +137,7 @@ mod tests {
         let start = Instant::now();
         let mut memodb = crate::memodb::MEMOdb::new();
         memodb.create_collection("test".to_string());
-        let mut collection = memodb.get_collection("test".to_string()).unwrap();
+        let collection = memodb.get_collection("test".to_string()).unwrap();
         for i in 0..repetition {
             collection.add(doc!{"name" => i});
         }

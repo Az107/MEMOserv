@@ -1,8 +1,17 @@
+// Written by Alberto Ruiz 2024-03-08
+// [Unfinished] module to index and create search structures
+//
+// The B-tree will be used to index the documents
+// and provide a fast search
+
+
+// B-tree node
+//      v: value of the content to index
+//      p: position of the document in the collection
 struct MIndex {
     pub v: i32,
     pub p: Vec<i32>,
 }
-
 
 //B-tree node
 pub struct BNode {

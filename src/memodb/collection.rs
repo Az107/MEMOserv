@@ -1,5 +1,11 @@
+// Writen by Alberto Ruiz 2024-03-08
+// The collection module will provide the collection of documents for the MEMOdb
+// The collection will store the documents in memory and provide a simple API to interact with them
+// The Document will be a HashMap<String, DataType> 
+
+
 use std::collections::HashMap;
-use super::{dataType::DataType, finder::BNode};
+use super::{data_type::DataType, finder::BNode};
 
 const ID: &str = "ID";
 
@@ -61,7 +67,7 @@ impl DocumentJson for Document {
 macro_rules! doc {
   ( $( $key: expr => $value: expr ),* ) => {
     {
-      use crate::memodb::dataType::DataType; // Add this line
+      use crate::memodb::data_type::DataType; // Add this line
       let mut map = crate::memodb::collection::Document::new();
       $(
         map.insert($key.to_string(), DataType::from($value)); // Update this line
@@ -80,7 +86,7 @@ pub struct Collection {
   last_id: u32,
   pub(crate) data: Vec<Document>,
   id_table: HashMap<u32, usize>,
-  bTree: BNode
+  //b_tree: BNode
 }
 
 
@@ -92,7 +98,7 @@ impl Collection {
       last_id: 0,
       data: Vec::new(),
       id_table: HashMap::new(),
-      bTree: BNode::new(),
+      //b_tree: BNode::new(),
     }
   }
 
@@ -144,7 +150,7 @@ impl Collection {
     self.data.iter().position(|x| x.get(ID).unwrap() == &id).unwrap()
   }
 
-  pub fn getAll(&self) -> &Vec<Document> {
+  pub fn get_all(&self) -> &Vec<Document> {
     &self.data
     
    }

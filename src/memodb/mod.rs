@@ -1,5 +1,12 @@
+// Written by Alberto Ruiz 2024-03-08
+// MEMOdb is a in-memory database, 
+// it will store the data in memory and provide a simple API to interact with it
+//
+// The MEMOdb will have a collection of documents, each document will be a HashMap<String, DataType>
+    
+
 pub mod collection;
-pub mod dataType;
+pub mod data_type;
 mod finder;
 use collection::Collection;
 
@@ -84,8 +91,10 @@ mod tests {
     #[test]
     fn test_memodb() {
         let mut memodb = crate::memodb::MEMOdb::new();
-        memodb.create_collection("users".to_string());
-        memodb.create_collection("posts".to_string());
+        let r1 = memodb.create_collection("users".to_string()).is_ok();
+        let r2 = memodb.create_collection("posts".to_string()).is_ok();
+        assert!(r1);
+        assert!(r2);
         assert_eq!(memodb.collections.len(), 2);
         assert_eq!(memodb.collections[0].name, "users");
         assert_eq!(memodb.collections[1].name, "posts");
@@ -101,7 +110,7 @@ mod tests {
     #[test]
     fn add_document() {
         let mut memodb = crate::memodb::MEMOdb::new();
-        memodb.create_collection("users".to_string());
+        let _ = memodb.create_collection("users".to_string());
         let collection = memodb.get_collection("users".to_string()).unwrap();
         collection.add(doc!{"name" => "John", "age" => 30});
         collection.add(doc!{"name" => "Jane", "age" => 25});
@@ -114,7 +123,7 @@ mod tests {
     #[test]
     fn add_document_from_struct() {
         let mut memodb = crate::memodb::MEMOdb::new();
-        memodb.create_collection("users".to_string());
+        let _ = memodb.create_collection("users".to_string());
         let collection = memodb.get_collection("users".to_string()).unwrap();
         let user = User {
             name: "John".to_string(),
@@ -136,7 +145,7 @@ mod tests {
         let repetition = 10i32.pow(VALUE);
         let start = Instant::now();
         let mut memodb = crate::memodb::MEMOdb::new();
-        memodb.create_collection("test".to_string());
+        let _ = memodb.create_collection("test".to_string());
         let collection = memodb.get_collection("test".to_string()).unwrap();
         for i in 0..repetition {
             collection.add(doc!{"name" => i});

@@ -7,7 +7,6 @@ use std::env;
 use hteapot::HteaPot;
 
 fn main() {
-
     
     print!("Starting server...");
     let args: Vec<String> = env::args().collect();

@@ -1,4 +1,10 @@
-use std::{collections::HashMap, thread};
+// Written by Alberto Ruiz 2024-03-08
+// This is the HTTP server module, it will handle the requests and responses
+// Also provide utilities to parse the requests and build the responses
+//
+// Info: This will be turn into a library
+
+use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 
@@ -77,19 +83,21 @@ pub struct HteaPot {
     port: u16,
     address: String,
     // this will store a map from path to their actions
-    path_table: HashMap<HttpMethod, HashMap<String, HashMap<HttpMethod, fn(HttpRequest) -> String>>>,
+    // path_table: HashMap<HttpMethod, HashMap<String, HashMap<HttpMethod, fn(HttpRequest) -> String>>>,
 }
 
 impl HteaPot {
 
+    // Constructor
     pub fn new(address: &str, port: u16) -> Self {
         HteaPot {
             port: port,
             address: address.to_string(),
-            path_table: HashMap::new(),
+            // path_table: HashMap::new(),
         }
     }
 
+    // Start the server
     pub fn listen(&self, action: impl Fn(HttpRequest) -> String ){
         let addr = format!("{}:{}", self.address, self.port);
         let listener = TcpListener::bind(addr).unwrap();
@@ -109,12 +117,15 @@ impl HteaPot {
         }
     }
 
+
+    // Create a response
     pub fn response_maker(status: HttpStatus, content: &str) -> String {
         let status_text = status as u16;
         let response = format!("HTTP/1.1 {} OK\r\n\r\n{}",status_text ,content);
         response
     }
 
+    // Parse the request
     pub fn request_parser(request: &str) -> HttpRequest {
         let mut lines = request.lines();
         let first_line = lines.next().unwrap();
@@ -157,6 +168,7 @@ impl HteaPot {
         }
     }
 
+    // Handle the client when a request is received
     fn handle_client(&self, mut stream: TcpStream , action: impl Fn(HttpRequest) -> String ) {
         let mut buffer = [0; 1024];
         stream.read(&mut buffer).unwrap(); //TODO: handle the error

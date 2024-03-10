@@ -1,16 +1,16 @@
+// Written by Alberto Ruiz 2024-03-07
+// This is the main engine of the server, it will process the requests and return the responses
+// 
+// The engine will have a MEMOdb instance to store the data
+
 use std::collections::HashMap;
 
-use crate::memodb::dataType::DataType;
+use crate::memodb::data_type::DataType;
 use crate::{doc, memodb::MEMOdb};
 use crate::memodb::collection::{Document, DocumentJson};
 use crate::hteapot::{HteaPot, HttpMethod, HttpRequest};
 use crate::hteapot::HttpStatus;
 
-// Writed by Alberto Ruiz 2024-03-07
-// This is the main engine of the server, it will process the requests and return the responses
-// 
-// The engine will have a MEMOdb instance to store the data
-//
 
 pub struct Engine {
   db: MEMOdb
@@ -26,7 +26,7 @@ impl Engine {
 
   //TODO: remove this function, test only
   pub fn init_mock_data(&mut self) {
-    self.db.create_collection("users".to_string());
+    let _ = self.db.create_collection("users".to_string());
     let collection = self.db.get_collection("users".to_string()).unwrap();
     collection.add(doc!{"name" => "John", "age" => 30});
     collection.add(doc!{"name" => "Jane", "age" => 25});
@@ -67,7 +67,7 @@ impl Engine {
     match collection {
         Some(collection) => {
             let mut body = String::from("[");
-            let documents = collection.getAll();
+            let documents = collection.get_all();
             for document in documents {
                 let result = document.to_json();
                 body.push_str(&result);

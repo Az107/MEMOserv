@@ -1,0 +1,19 @@
+[package]
+name = "memodb/memoserv"
+version = "0.1.11"
+description = "Just a memodb server"
+readme = "README.md"
+wasmer-extra-flags = "--net --enable-threads --enable-bulk-memory"
+
+[[module]]
+name = "memoserv"
+source = "target/wasm32-wasmer-wasi/release/memoserv.wasm"
+abi = "wasi"
+
+[module.interfaces]
+wasi = "0.1.0-unstable"
+
+[[command]]
+name = "memoserv"
+module = "memoserv"
+runner = "wasi"

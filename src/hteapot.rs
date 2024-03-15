@@ -100,7 +100,14 @@ impl HteaPot {
     // Start the server
     pub fn listen(&self, action: impl Fn(HttpRequest) -> String ){
         let addr = format!("{}:{}", self.address, self.port);
-        let listener = TcpListener::bind(addr).unwrap();
+        let listener = TcpListener::bind(addr);
+        let listener = match listener {
+            Ok(listener) => listener,
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                return;
+            }
+        };
         for stream in listener.incoming() {
             match stream {
                  Ok(stream) => {
@@ -121,7 +128,8 @@ impl HteaPot {
     // Create a response
     pub fn response_maker(status: HttpStatus, content: &str) -> String {
         let status_text = status as u16;
-        let response = format!("HTTP/1.1 {} OK\r\n\r\n{}",status_text ,content);
+        let content_length = format!("Content-Length: {}", content.len());
+        let response = format!("HTTP/1.1 {} OK\r\n{}\r\n\r\n{}",status_text,content_length ,content);
         response
     }
 
@@ -131,7 +139,7 @@ impl HteaPot {
         let first_line = lines.next().unwrap();
         let mut words = first_line.split_whitespace();
         let method = words.next().unwrap();
-        let mut path = words.next().unwrap();
+        let mut path = words.next().unwrap().to_string();
         let mut headers: HashMap<String, String> = HashMap::new();
         loop {
             let line = lines.next().unwrap();
@@ -146,9 +154,25 @@ impl HteaPot {
         let remaining_lines: Vec<&str>  = lines.collect();
         let body = remaining_lines.join("");
         let mut args: HashMap<String, String> = HashMap::new();
+        //remove http or https from the path
+        if path.starts_with("http://") {
+            path = path.trim_start_matches("http://").to_string();
+        } else if path.starts_with("https://") {
+            path = path.trim_start_matches("https://").to_string();
+        }
+        //remove the host name if present
+        if !path.starts_with("/") {
+            //remove all the characters until the first /
+            let mut parts = path.split("/");
+            parts.next();
+            path = parts.collect::<Vec<&str>>().join("/");
+            //add / to beggining
+            path = format!("/{}", path);
+        }
+
         if path.contains('?') {
             let mut parts = path.split('?');
-            path = parts.next().unwrap();
+            let path = parts.next().unwrap();
             let query = parts.next().unwrap();
             let query_parts: Vec<&str> = query.split('&').collect();
             for part in query_parts {
@@ -177,7 +201,14 @@ impl HteaPot {
         println!("Received request: \n{} {}\n\n", request.method.to_str(), request.path);
         //let response = Self::response_maker(HttpStatus::IAmATeapot, "Hello, World!");
         let response = action(request);
-        stream.write(response.as_bytes()).unwrap(); //TODO: handle the error
-        stream.flush().unwrap(); //TODO: handle the error
+        println!("Sending response: \n{}", response);
+        let r = stream.write(response.as_bytes()); 
+        if r.is_err() {
+            eprintln!("Error: {}", r.err().unwrap());
+        }
+        let r = stream.flush();
+        if r.is_err() {
+            eprintln!("Error: {}", r.err().unwrap());
+        }
     }
 }

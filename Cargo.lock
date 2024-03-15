@@ -5,3 +5,13 @@ version = 3
 [[package]]
 name = "memoserv"
 version = "0.1.0"
+
+[[patch.unused]]
+name = "libc"
+version = "0.2.139"
+source = "git+https://github.com/wasix-org/libc.git?branch=master#4c0c6c29378b68c4af7f0b1384a111ba3081b6bf"
+
+[[patch.unused]]
+name = "socket2"
+version = "0.4.9"
+source = "git+https://github.com/wasix-org/socket2.git?branch=v0.4.9#a701d8559c11746b4facf3a6aa1b1de271e4ce16"

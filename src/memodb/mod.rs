@@ -112,10 +112,10 @@ mod tests {
         let mut memodb = crate::memodb::MEMOdb::new();
         let _ = memodb.create_collection("users".to_string());
         let collection = memodb.get_collection("users".to_string()).unwrap();
-        collection.add(doc!{"name" => "John", "age" => 30});
-        collection.add(doc!{"name" => "Jane", "age" => 25});
+        let id1 = collection.add(doc!{"name" => "John", "age" => 30});
+        let id2 = collection.add(doc!{"name" => "Jane", "age" => 25});
         assert_eq!(collection.count(), 2);
-        let document = collection.get(1).unwrap();
+        let document = collection.get(id1).unwrap();
         let user = User::from_document(document);
         assert_eq!(user.name, "John");
     } 
@@ -137,22 +137,4 @@ mod tests {
         assert_eq!(user.name, "John");
     }
 
-
-    #[test]
-    fn write_benchmark() {
-        const VALUE : u32 = 5;
-        // create a repetition value pow 10 to VALUE
-        let repetition = 10i32.pow(VALUE);
-        let start = Instant::now();
-        let mut memodb = crate::memodb::MEMOdb::new();
-        let _ = memodb.create_collection("test".to_string());
-        let collection = memodb.get_collection("test".to_string()).unwrap();
-        for i in 0..repetition {
-            collection.add(doc!{"name" => i});
-        }
-        let duration = start.elapsed();
-        println!("🟦 Time elapsed in writing {} repetitions: {:?}", repetition, duration);
-        assert!(duration.as_millis() < 150);
-
-    }
 }

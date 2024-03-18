@@ -1,12 +1,13 @@
+
 struct User {
-    id: u32,
+    id: Uuid,
     username: String,
     password: String
 }
 
 impl User {
     pub fn new(username: String, password: String) -> User {
-      let id = 0; //TODO: generate uuid
+      let id = Uuid::new_v4();
         User {
             id,
             username,

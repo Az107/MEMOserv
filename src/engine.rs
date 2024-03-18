@@ -4,6 +4,7 @@
 // The engine will have a MEMOdb instance to store the data
 
 use std::collections::HashMap;
+use uuid::Uuid;
 
 use crate::memodb::data_type::DataType;
 use crate::{doc, memodb::MEMOdb};
@@ -41,7 +42,7 @@ impl Engine {
     HteaPot::response_maker(HttpStatus::OK, &list)
   }
 
-  fn get_document_by_id(&mut self, collection_name: &str, id: u32) -> String {
+  fn get_document_by_id(&mut self, collection_name: &str, id: Uuid) -> String {
     let collection = self.db.get_collection(collection_name.to_string());
     match collection {
         Some(collection) => {
@@ -111,7 +112,7 @@ impl Engine {
     HteaPot::response_maker(HttpStatus::OK, &result)
   }
 
-  fn delete_document(&mut self, collection_name: &str, id: u32) -> String {
+  fn delete_document(&mut self, collection_name: &str, id: Uuid) -> String {
     let collection = self.db.get_collection(collection_name.to_string());
     match collection {
         Some(collection) => {
@@ -123,7 +124,6 @@ impl Engine {
         }
     }
   }
-
 
   //process the request and return the response
   pub fn process(&mut self, request: HttpRequest) -> String {
@@ -146,7 +146,7 @@ impl Engine {
                     self.find(collection_name, request.args)
                 }
                 _ => {
-                    let id = path[2].parse::<u32>();
+                    let id = path[2].parse::<Uuid>();
                     match id {
                         Ok(id) => {
                             self.get_document_by_id(collection_name, id)
@@ -208,7 +208,7 @@ impl Engine {
                     }
                 }
             } else {
-                let id = path[2].parse::<u32>().unwrap();
+                let id = path[2].parse::<Uuid>().unwrap();
                 self.delete_document(collection_name, id)
             }
         }

@@ -3,12 +3,12 @@
 // this will be store several types of data, like text, numbers, dates, arrays and documents
 //
 // The data type will be used to store the data in the documents
-
+use uuid::Uuid;
 use super::collection::{Document, DocumentJson};
 
 #[derive(PartialEq)]
 pub enum DataType {
-  Id(u32),
+  Id(Uuid),
   Text(String),
   Number(i32),
   Boolean(bool),
@@ -32,7 +32,7 @@ impl DataType {
 
   pub fn to_json(&self) -> String {
     match self {
-      DataType::Id(id) => id.to_string(),
+      DataType::Id(id) => format!("\"{}\"", id.to_string()),
       DataType::Text(text) => format!("\"{}\"", text),
       DataType::Number(number) => number.to_string(),
       DataType::Boolean(boolean) => boolean.to_string(),
@@ -86,7 +86,7 @@ impl DataType {
     }
   }
   //add into 
-  pub fn to_id(&self) -> u32 {
+  pub fn to_id(&self) -> Uuid {
     match self {
       DataType::Id(id) => *id,
       _ => panic!("Not an ID"),
@@ -162,8 +162,8 @@ impl ToString for DataType {
 }
 
 
-impl From<u32> for DataType {
-  fn from(value: u32) -> Self {
+impl From<Uuid> for DataType {
+  fn from(value: Uuid) -> Self {
     DataType::Id(value)
   }
 }

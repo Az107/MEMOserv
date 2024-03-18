@@ -8,6 +8,8 @@ use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 
+#[derive(Debug)]
+#[derive(PartialEq)]
 pub enum HttpMethod {
     GET,
     POST,
@@ -212,3 +214,25 @@ impl HteaPot {
         }
     }
 }
+
+
+#[cfg(test)]
+
+#[test]
+fn test_http_parser() {
+    let request = "GET / HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: curl/7.68.0\r\nAccept: */*\r\n\r\n";
+    let parsed_request = HteaPot::request_parser(request);
+    assert_eq!(parsed_request.method, HttpMethod::GET);
+    assert_eq!(parsed_request.path, "/");
+    assert_eq!(parsed_request.args.len(), 0);
+    assert_eq!(parsed_request.headers.len(), 3);
+    assert_eq!(parsed_request.body, "");
+}
+
+#[test]
+fn test_http_response_maker() {
+    let response = HteaPot::response_maker(HttpStatus::IAmATeapot, "Hello, World!");
+    let expected_response = "HTTP/1.1 418 OK\r\nContent-Length: 13\r\n\r\nHello, World!";
+    assert_eq!(response, expected_response);
+}
+

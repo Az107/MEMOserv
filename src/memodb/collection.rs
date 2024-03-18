@@ -3,7 +3,7 @@
 // The collection will store the documents in memory and provide a simple API to interact with them
 // The Document will be a HashMap<String, DataType> 
 
-
+use uuid::Uuid;
 use std::collections::HashMap;
 use super::data_type::DataType;
 
@@ -50,7 +50,7 @@ impl DocumentJson for Document {
       let value = kv.next().unwrap().trim();
       if key == ID {
         //TODO check if value is a number otherwise return error ? or parse not as ID
-        let value = value.parse::<u32>().unwrap();
+        let value = value.parse::<Uuid>().unwrap();
         document.insert(key.to_string(), DataType::Id(value));
       } else {
         document.insert(key.to_string(), DataType::from_json(value));
@@ -85,7 +85,7 @@ pub struct Collection {
   pub name: String,
   last_id: u32,
   pub(crate) data: Vec<Document>,
-  id_table: HashMap<u32, usize>,
+  id_table: HashMap<Uuid, usize>,
   //b_tree: BNode
 }
 
@@ -110,18 +110,18 @@ impl Collection {
     }
   }
 
-  pub fn add(&mut self, document: Document) -> u32 {
+  pub fn add(&mut self, document: Document) -> Uuid {
     let mut document = document;
     if !document.contains_key(ID) {
-      self.last_id += 1;
-      document.insert(ID.to_string(), DataType::Id(self.last_id));
+      let id = Uuid::new_v4();
+      document.insert(ID.to_string(), DataType::Id(id));
     } else {
       let id = document.get(ID).unwrap().to_id();
       // if id exists replace id with new id
       if self.id_table.contains_key(&id) {
-        self.last_id += 1;
         document.remove(ID);
-        document.insert(ID.to_string(), DataType::Id(self.last_id));
+        let id = Uuid::new_v4();
+        document.insert(ID.to_string(), DataType::Id(id));
       }
     }
     let id = document.get(ID).unwrap().to_id();
@@ -130,7 +130,7 @@ impl Collection {
     id
   }
 
-  pub fn rm(&mut self, id: u32) {
+  pub fn rm(&mut self, id: Uuid) {
     //self.data.remove(index);
     let index = self.get_index(id);
     self.data.swap_remove(index);
@@ -145,7 +145,7 @@ impl Collection {
     self.data.get(index)
   }
 
-  fn get_index(&self, id: u32) -> usize {
+  fn get_index(&self, id: Uuid) -> usize {
     let id = DataType::Id(id);
     self.data.iter().position(|x| x.get(ID).unwrap() == &id).unwrap()
   }
@@ -180,12 +180,12 @@ impl Collection {
     result
   }
 
-  fn slow_get(&self, id: u32) -> Option<&Document> {
+  fn slow_get(&self, id: Uuid) -> Option<&Document> {
     let id = DataType::Id(id);
     self.data.iter().find(|&x| x.get(ID).unwrap() == &id)
   }
 
-  pub fn get(&self, id: u32) -> Option<&Document> {
+  pub fn get(&self, id: Uuid) -> Option<&Document> {
     let index = self.id_table.get(&id);
     match index {
       Some(index) => self.data.get(*index),

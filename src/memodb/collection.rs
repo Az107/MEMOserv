@@ -6,6 +6,7 @@
 use uuid::Uuid;
 use std::collections::HashMap;
 use super::data_type::DataType;
+use serde_json::{Result, Value};
 
 const ID: &str = "ID";
 
@@ -26,36 +27,39 @@ pub trait DocumentJson {
 
 impl DocumentJson for Document {
   fn to_json(&self) -> String {
-    let mut json = String::from("{");
+    let mut json = serde_json::json!({});
     for (key, value) in self.iter() {
-      json.push_str(&format!("\"{}\":{},", key, value.to_json()));
-    }
-    json.pop();
-    json.push('}');
-    json
-  }
-  fn from_json(json: &str) -> Self {
-    let json = json.trim().trim_end();
-    //remove all traling zero bytes
-    let json = json.trim_matches(char::from(0));
-    let json = &json[1..json.len()-1];
-
-    //remove last bracket
-    let mut document = Document::new();
-    let json = json.split(',');
-    for kv in json {
-      println!("value: {}", kv);
-      let mut kv = kv.split(':');
-      let key = kv.next().unwrap().trim().replace("\"", "");
-      let value = kv.next().unwrap().trim();
-      if key == ID {
-        //TODO check if value is a number otherwise return error ? or parse not as ID
-        let value = value.parse::<Uuid>().unwrap();
-        document.insert(key.to_string(), DataType::Id(value));
-      } else {
-        document.insert(key.to_string(), DataType::from_json(value));
+      match value {
+        DataType::Id(id) => json[key] = serde_json::json!(id.to_string()),
+        DataType::Text(text) => json[key] = serde_json::json!(text),
+        DataType::Number(number) => json[key] = serde_json::json!(number),
+        DataType::Boolean(boolean) => json[key] = serde_json::json!(boolean),
+        _ => json[key] = serde_json::json!("()")
       }
     }
+    json.to_string()
+  }
+
+  fn from_json(json: &str) -> Self {
+      let json = json.trim().trim_end();
+      //remove all traling zero bytes
+      let json = json.trim_matches(char::from(0));
+      let v: Value = serde_json::from_str(json).unwrap();
+      let mut document = Document::new();
+      for (key, value) in v.as_object().unwrap() {
+        let value: Value = value.clone();
+        if key == ID {
+          document.insert(key.to_string(), DataType::Id(Uuid::parse_str(value.as_str().unwrap()).unwrap()));
+        } else {
+          match value {
+            Value::Number(n) => document.insert(key.to_string(), DataType::Number(n.as_i64().unwrap() as i32)),
+            Value::String(s) => document.insert(key.to_string(), DataType::Text(s)),
+            Value::Bool(b) => document.insert(key.to_string(), DataType::Boolean(b)),
+            _ => document.insert(key.to_string(), DataType::Text("()".to_string()))
+          };
+        }
+      }
+  
     document
   
   }

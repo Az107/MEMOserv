@@ -53,6 +53,7 @@ impl HttpMethod {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum HttpStatus {
     OK = 200,
     Created = 201,
@@ -71,6 +72,32 @@ pub enum HttpStatus {
     BadGateway = 502,
     ServiceUnavailable = 503,
 }
+
+
+impl HttpStatus {
+    fn to_string(&self) -> &str {
+        match self {
+            HttpStatus::OK => "OK",
+            HttpStatus::Created => "Created",
+            HttpStatus::Accepted => "Accepted",
+            HttpStatus::NoContent => "No Content",
+            HttpStatus::MovedPermanently => "Moved Permanently",
+            HttpStatus::MovedTemporarily => "Moved Temporarily",
+            HttpStatus::NotModified => "Not Modified",
+            HttpStatus::BadRequest => "Bad Request",
+            HttpStatus::Unauthorized => "Unauthorized",
+            HttpStatus::Forbidden => "Forbidden",
+            HttpStatus::NotFound => "Not Found",
+            HttpStatus::IAmATeapot => "I'm a teapot",
+            HttpStatus::InternalServerError => "Internal Server Error",
+            HttpStatus::NotImplemented => "Not Implemented",
+            HttpStatus::BadGateway => "Bad Gateway",
+            HttpStatus::ServiceUnavailable => "Service Unavailable",
+        }
+    }
+
+}
+
 
 pub struct HttpRequest {
     pub method: HttpMethod,
@@ -129,9 +156,9 @@ impl HteaPot {
 
     // Create a response
     pub fn response_maker(status: HttpStatus, content: &str) -> String {
-        let status_text = status as u16;
+        let status_text = status.to_string();
         let content_length = format!("Content-Length: {}", content.len());
-        let response = format!("HTTP/1.1 {} OK\r\n{}\r\n\r\n{}",status_text,content_length ,content);
+        let response = format!("HTTP/1.1 {} {}\r\n{}\r\n\r\n{}",status as u16, status_text,content_length ,content);
         response
     }
 

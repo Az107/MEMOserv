@@ -62,7 +62,6 @@ impl MEMOdb {
 //TEST
 #[cfg(test)]
 mod tests {
-    use std::time::Instant;
     use crate::doc;
     use crate::memodb::collection::Document;
     use crate::memodb::collection::DocumentStruct;

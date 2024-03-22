@@ -182,6 +182,9 @@ impl HteaPot {
         }
         let remaining_lines: Vec<&str>  = lines.collect();
         let body = remaining_lines.join("");
+        let body = body.trim().trim_end();
+        //remove all traling zero bytes
+        let body = body.trim_matches(char::from(0));
         let mut args: HashMap<String, String> = HashMap::new();
         //remove http or https from the path
         if path.starts_with("http://") {
@@ -259,7 +262,7 @@ fn test_http_parser() {
 #[test]
 fn test_http_response_maker() {
     let response = HteaPot::response_maker(HttpStatus::IAmATeapot, "Hello, World!");
-    let expected_response = "HTTP/1.1 418 OK\r\nContent-Length: 13\r\n\r\nHello, World!";
+    let expected_response = "HTTP/1.1 418 I'm a teapot\r\nContent-Length: 13\r\n\r\nHello, World!";
     assert_eq!(response, expected_response);
 }
 

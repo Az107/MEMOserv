@@ -4,7 +4,7 @@
 // The Document will be a HashMap<String, DataType> 
 
 use uuid::Uuid;
-use std::collections::HashMap;
+use std::{borrow::BorrowMut, collections::HashMap};
 use super::data_type::DataType;
 use serde_json::{Result, Value};
 
@@ -41,21 +41,29 @@ impl DocumentJson for Document {
   }
 
   fn from_json(json: &str) -> Self {
-      let json = json.trim().trim_end();
-      //remove all traling zero bytes
-      let json = json.trim_matches(char::from(0));
       let v: Value = serde_json::from_str(json).unwrap();
       let mut document = Document::new();
       for (key, value) in v.as_object().unwrap() {
         let value: Value = value.clone();
         if key == ID {
-          document.insert(key.to_string(), DataType::Id(Uuid::parse_str(value.as_str().unwrap()).unwrap()));
+          let value_is_string = value.is_string();
+          let id = Uuid::parse_str(value.as_str().unwrap());
+          if id.is_ok() && value_is_string {
+            document.insert(key.to_string(), DataType::Id(id.unwrap()));
+          } else {
+            match value {
+              Value::Number(n) => document.insert("id".to_string(), DataType::Number(n.as_i64().unwrap() as i32)),
+              Value::String(s) => document.insert("id".to_string(), DataType::Text(s)),
+              Value::Bool(b) => document.insert("id".to_string(), DataType::Boolean(b)),
+              _ => document.insert("id".to_string(), DataType::Text("".to_string()))
+            };
+          }
         } else {
           match value {
             Value::Number(n) => document.insert(key.to_string(), DataType::Number(n.as_i64().unwrap() as i32)),
             Value::String(s) => document.insert(key.to_string(), DataType::Text(s)),
             Value::Bool(b) => document.insert(key.to_string(), DataType::Boolean(b)),
-            _ => document.insert(key.to_string(), DataType::Text("()".to_string()))
+            _ => document.insert(key.to_string(), DataType::Text("".to_string()))
           };
         }
       }
@@ -87,7 +95,6 @@ macro_rules! doc {
 
 pub struct Collection {
   pub name: String,
-  last_id: u32,
   pub(crate) data: Vec<Document>,
   id_table: HashMap<Uuid, usize>,
   //b_tree: BNode
@@ -99,7 +106,6 @@ impl Collection {
   pub fn new(name: String) -> Self {
     Collection {
       name: name,
-      last_id: 0,
       data: Vec::new(),
       id_table: HashMap::new(),
       //b_tree: BNode::new(),
@@ -184,17 +190,29 @@ impl Collection {
     result
   }
 
-  fn slow_get(&self, id: Uuid) -> Option<&Document> {
+  fn slow_get(&mut self, id: Uuid) -> Option<&mut Document> {
     let id = DataType::Id(id);
-    self.data.iter().find(|&x| x.get(ID).unwrap() == &id)
+    self.data.iter_mut().find(|x| x.get(ID).unwrap() == &id)
+
+
   }
 
-  pub fn get(&self, id: Uuid) -> Option<&Document> {
+  pub fn get(&mut self, id: Uuid) -> Option<&mut Document> {
     let index = self.id_table.get(&id);
     match index {
-      Some(index) => self.data.get(*index),
+      Some(index) => self.data.get_mut(*index),
       None => self.slow_get(id)
     }
+  }
+
+
+  pub fn update_document(&mut self,id: Uuid, new_document: Document) -> Option<&Document> {
+    let document = self.get(id).unwrap();
+    for (key, val) in new_document.iter() {
+      document.remove(key);
+      document.insert(key.to_string(), val.clone());
+    }
+    return Some(document);
   }
 
 }

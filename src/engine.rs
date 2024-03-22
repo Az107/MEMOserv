@@ -4,10 +4,11 @@
 // The engine will have a MEMOdb instance to store the data
 
 use std::collections::HashMap;
+use uuid::{uuid, Uuid};
 
 use crate::memodb::data_type::DataType;
 use crate::{doc, memodb::MEMOdb};
-use crate::memodb::collection::{Document, DocumentJson};
+use crate::memodb::collection::{self, Document, DocumentJson};
 use crate::hteapot::{HteaPot, HttpMethod, HttpRequest};
 use crate::hteapot::HttpStatus;
 
@@ -41,8 +42,8 @@ impl Engine {
     HteaPot::response_maker(HttpStatus::OK, &list)
   }
 
-  fn get_document_by_id(&mut self, collection_name: &str, id: u32) -> String {
-    let collection = self.db.get_collection(collection_name.to_string());
+  fn get_document_by_id(&mut self, collection_name: String, id: Uuid) -> String {
+    let collection = self.db.get_collection(collection_name);
     match collection {
         Some(collection) => {
             let document = collection.get(id);
@@ -62,8 +63,8 @@ impl Engine {
     }
   }
 
-  fn get_all_documents(&mut self, collection_name: &str) -> String {
-    let collection = self.db.get_collection(collection_name.to_string());
+  fn get_all_documents(&mut self, collection_name: String) -> String {
+    let collection = self.db.get_collection(collection_name);
     match collection {
         Some(collection) => {
             let mut body = String::from("[");
@@ -83,8 +84,8 @@ impl Engine {
     }
   }
 
-  fn find(&mut self, collection_name: &str, args: HashMap<String,String>) -> String {
-    let collection = self.db.get_collection(collection_name.to_string());
+  fn find(&mut self, collection_name: String, args: HashMap<String,String>) -> String {
+    let collection = self.db.get_collection(collection_name);
     match collection {
         Some(collection) => {
         let mut body = String::from("[");
@@ -105,14 +106,19 @@ impl Engine {
     }
   }
 
-  fn delete_collection(&mut self, collection_name: &str) -> String {
-    let collection = self.db.remove_collection(collection_name.to_string());
+  fn delete_collection(&mut self, collection_name: String) -> String {
+    let collection = self.db.remove_collection(collection_name);
     let result = format!("{{\"collection\": \"{}\"}}", collection.name);
     HteaPot::response_maker(HttpStatus::OK, &result)
   }
 
-  fn delete_document(&mut self, collection_name: &str, id: u32) -> String {
-    let collection = self.db.get_collection(collection_name.to_string());
+  fn delete_document(&mut self, collection_name: String, document: String) -> String {
+    let id = Uuid::parse_str(document.as_str());
+    if id.is_err() {
+        HteaPot::response_maker(HttpStatus::BadRequest, "Invalid id");
+    }
+    let id = id.unwrap();
+    let collection = self.db.get_collection(collection_name);
     match collection {
         Some(collection) => {
             collection.rm(id);
@@ -124,20 +130,43 @@ impl Engine {
     }
   }
 
-
   //process the request and return the response
   pub fn process(&mut self, request: HttpRequest) -> String {
+    let mut path = request.path.split("/").collect::<Vec<&str>>();
+    path.retain(|&x| x != "");
+    let collection_name:Option<String> =  if path.len() >= 1 {Some(path[0].to_string())} else {None};
+    let document_name: Option<String> =  if path.len() >= 2 {Some(path[1].to_string())} else {None};
+    println!("PATH {:?}",path);
+    println!("col {:?}", collection_name);
+    println!("doc {:?}", document_name);
+
+
     match request.method {
         HttpMethod::GET => {
-            //path /collection_name/id
-            let path = request.path.split("/").collect::<Vec<&str>>();
-            println!("path: {:?}", path);
-            if path.len() <= 2 {
+            // PATH /{collection_name}/{id}
+            // 1. / -> list of collections
+            // 2. /{collection_name} -> collection exists ? 200 : 404
+            // 3. /{collection_name}/{id}
+            //      a. id == uuid -> return document 
+            //      b. id == all -> return all documents (should be paginted?)
+            //      c. id == find?query -> return all documents that has one or      
+
+            //path /
+            if collection_name.is_none() {
                 //list all collections
                 return self.get_collection_list()
             }
-            let collection_name = path[1];
-            match path[2] {
+            let collection_name = collection_name.unwrap();
+            if document_name.is_none() {
+                let r = self.db.get_collection(collection_name);
+                return match r {
+                    Some(_) => HteaPot::response_maker(HttpStatus::OK, ""),
+                    None => HteaPot::response_maker(HttpStatus::NotFound, ""),
+                };
+            }
+            let document_name = document_name.unwrap();
+            let d = document_name.as_str();
+            match d {
                 "all" => {
                     self.get_all_documents(collection_name)
                 }
@@ -146,7 +175,7 @@ impl Engine {
                     self.find(collection_name, request.args)
                 }
                 _ => {
-                    let id = path[2].parse::<u32>();
+                    let id = path[2].parse::<Uuid>();
                     match id {
                         Ok(id) => {
                             self.get_document_by_id(collection_name, id)
@@ -160,10 +189,12 @@ impl Engine {
         }
         HttpMethod::POST => {
             //path /collection_name OR /
-            let path = request.path.split("/").collect::<Vec<&str>>();
-            if path.len() == 2 {
-                let collection_name = path[1];
-                let result = self.db.create_collection(collection_name.to_string());
+            if collection_name.is_none() {
+                return HteaPot::response_maker(HttpStatus::BadRequest, "Bad request");
+            }
+            let collection_name = collection_name.unwrap();
+            if document_name.is_none() {
+                let result = self.db.create_collection(collection_name);
                 match result {
                     Ok(_) => {
                         HteaPot::response_maker(HttpStatus::Created, "Created")
@@ -173,8 +204,7 @@ impl Engine {
                     }
                 }
             } else {
-                let collection_name = path[1];
-                let collection = self.db.get_collection(collection_name.to_string());
+                let collection = self.db.get_collection(collection_name);
                 match collection {
                     Some(collection) => {
                         println!("Request body: {}", request.body);
@@ -190,26 +220,46 @@ impl Engine {
             }
         }
         HttpMethod::DELETE => {
-            //path /collection_name OR /collection_name/id
-            let path = request.path.split("/").collect::<Vec<&str>>();
-            let collection_name = path[1];
-            if path.len() == 2 {
+            // PATH /{collection_name}/{id}
+            if collection_name.is_none() {
+                return HteaPot::response_maker(HttpStatus::BadRequest, "Bad request");
+            }
+            let collection_name = collection_name.unwrap();
+            if document_name.is_some() {
+                let document = document_name.unwrap();
+                return self.delete_document(collection_name, document)
+            } else {
                 let confirmation = request.headers.get("amisure");
                 match confirmation {
                     Some(confirmation) => {
                         if confirmation == "yes" {
-                            self.delete_collection(collection_name)
+                            return self.delete_collection(collection_name);
                         } else {
-                            HteaPot::response_maker(HttpStatus::Unauthorized, "add amisure header with value yes to confirm")
+                            return HteaPot::response_maker(HttpStatus::Unauthorized, "add amisure header with value yes to confirm");
                         }
                     }
                     None => {
-                        HteaPot::response_maker(HttpStatus::BadRequest, "Bad Request")
+                        return HteaPot::response_maker(HttpStatus::BadRequest, "Bad Request")
                     }
                 }
+            }
+        }
+        HttpMethod::PUT => {
+            if collection_name.is_some() && document_name.is_some() {
+                let collection_name  = collection_name.unwrap();
+                let document_name = document_name.unwrap();
+                let new_document: Document = DocumentJson::from_json(&request.body);
+                let collection = self.db.get_collection(collection_name);
+                if collection.is_none() {return HteaPot::response_maker(HttpStatus::NotFound, "Collection not found"); }
+                let collection = collection.unwrap();
+                let id = Uuid::parse_str(document_name.as_str());
+                if id.is_err() {return HteaPot::response_maker(HttpStatus::BadRequest, "Bad request"); };
+                let id = id.unwrap();
+                collection.update_document(id, new_document);
+                return HteaPot::response_maker(HttpStatus::OK, "Updated");
+
             } else {
-                let id = path[2].parse::<u32>().unwrap();
-                self.delete_document(collection_name, id)
+                return HteaPot::response_maker(HttpStatus::BadRequest, "Bad request");
             }
         }
         _ => {

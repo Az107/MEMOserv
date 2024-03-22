@@ -6,6 +6,8 @@ use engine::Engine;
 use std::env;
 use hteapot::HteaPot;
 
+const DEFAULT_PORT: u16 = 8080;
+
 fn main() {
     
     //let args: Vec<String> = env::args().collect();
@@ -13,7 +15,7 @@ fn main() {
     //let port = args.get(2);
     let port = match env::var("PORT") {
             Ok(val) => val,
-            Err(_) => String::from("80"),
+            Err(_) => DEFAULT_PORT.to_string(),
     };
     let teapot = HteaPot::new(&addr, port.parse().unwrap());
     let engine = RefCell::new(Engine::new());

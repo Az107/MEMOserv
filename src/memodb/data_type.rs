@@ -3,16 +3,15 @@
 // this will be store several types of data, like text, numbers, dates, arrays and documents
 //
 // The data type will be used to store the data in the documents
-
+use uuid::Uuid;
 use super::collection::{Document, DocumentJson};
 
 #[derive(PartialEq)]
 pub enum DataType {
-  Id(u32),
+  Id(Uuid),
   Text(String),
   Number(i32),
   Boolean(bool),
-  Date(String),
   Array(Vec<DataType>),
   Document(Document),
 }
@@ -24,19 +23,18 @@ impl DataType {
       DataType::Text(_) => "text",
       DataType::Number(_) => "number",
       DataType::Boolean(_) => "boolean",
-      DataType::Date(_) => "date",
       DataType::Array(_) => "array",
       DataType::Document(_) => "document",
     }
   }
 
+  #[deprecated]
   pub fn to_json(&self) -> String {
     match self {
-      DataType::Id(id) => id.to_string(),
+      DataType::Id(id) => format!("\"{}\"", id.to_string()),
       DataType::Text(text) => format!("\"{}\"", text),
       DataType::Number(number) => number.to_string(),
       DataType::Boolean(boolean) => boolean.to_string(),
-      DataType::Date(date) => format!("\"{}\"", date),
       DataType::Array(array) => {
         let mut json = String::from("[");
         for value in array {
@@ -59,6 +57,7 @@ impl DataType {
     }
   }
 
+  #[deprecated]
   pub fn from_json(json: &str) -> DataType {
     let json = json.trim();
     if json.starts_with('[') {
@@ -86,7 +85,7 @@ impl DataType {
     }
   }
   //add into 
-  pub fn to_id(&self) -> u32 {
+  pub fn to_id(&self) -> Uuid {
     match self {
       DataType::Id(id) => *id,
       _ => panic!("Not an ID"),
@@ -108,12 +107,6 @@ impl DataType {
     match self {
       DataType::Boolean(boolean) => *boolean,
       _ => panic!("Not a Boolean"),
-    }
-  }
-  pub fn to_date(&self) -> &String {
-    match self {
-      DataType::Date(date) => date,
-      _ => panic!("Not a Date"),
     }
   }
   pub fn to_array(&self) -> &Vec<DataType> {
@@ -138,7 +131,6 @@ impl ToString for DataType {
       DataType::Text(text) => text.to_string(),
       DataType::Number(number) => number.to_string(),
       DataType::Boolean(boolean) => boolean.to_string(),
-      DataType::Date(date) => date.to_string(),
       DataType::Array(array) => {
         let mut result = String::new();
         for value in array {
@@ -162,8 +154,8 @@ impl ToString for DataType {
 }
 
 
-impl From<u32> for DataType {
-  fn from(value: u32) -> Self {
+impl From<Uuid> for DataType {
+  fn from(value: Uuid) -> Self {
     DataType::Id(value)
   }
 }
@@ -212,7 +204,6 @@ impl Clone for DataType {
       DataType::Text(text) => DataType::Text(text.clone()),
       DataType::Number(number) => DataType::Number(*number),
       DataType::Boolean(boolean) => DataType::Boolean(*boolean),
-      DataType::Date(date) => DataType::Date(date.clone()),
       DataType::Array(array) => DataType::Array(array.clone()),
       DataType::Document(document) => DataType::Document(document.clone()),
     }

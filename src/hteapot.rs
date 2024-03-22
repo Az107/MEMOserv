@@ -8,6 +8,8 @@ use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 
+#[derive(Debug)]
+#[derive(PartialEq)]
 pub enum HttpMethod {
     GET,
     POST,
@@ -51,6 +53,7 @@ impl HttpMethod {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum HttpStatus {
     OK = 200,
     Created = 201,
@@ -69,6 +72,32 @@ pub enum HttpStatus {
     BadGateway = 502,
     ServiceUnavailable = 503,
 }
+
+
+impl HttpStatus {
+    fn to_string(&self) -> &str {
+        match self {
+            HttpStatus::OK => "OK",
+            HttpStatus::Created => "Created",
+            HttpStatus::Accepted => "Accepted",
+            HttpStatus::NoContent => "No Content",
+            HttpStatus::MovedPermanently => "Moved Permanently",
+            HttpStatus::MovedTemporarily => "Moved Temporarily",
+            HttpStatus::NotModified => "Not Modified",
+            HttpStatus::BadRequest => "Bad Request",
+            HttpStatus::Unauthorized => "Unauthorized",
+            HttpStatus::Forbidden => "Forbidden",
+            HttpStatus::NotFound => "Not Found",
+            HttpStatus::IAmATeapot => "I'm a teapot",
+            HttpStatus::InternalServerError => "Internal Server Error",
+            HttpStatus::NotImplemented => "Not Implemented",
+            HttpStatus::BadGateway => "Bad Gateway",
+            HttpStatus::ServiceUnavailable => "Service Unavailable",
+        }
+    }
+
+}
+
 
 pub struct HttpRequest {
     pub method: HttpMethod,
@@ -127,9 +156,9 @@ impl HteaPot {
 
     // Create a response
     pub fn response_maker(status: HttpStatus, content: &str) -> String {
-        let status_text = status as u16;
+        let status_text = status.to_string();
         let content_length = format!("Content-Length: {}", content.len());
-        let response = format!("HTTP/1.1 {} OK\r\n{}\r\n\r\n{}",status_text,content_length ,content);
+        let response = format!("HTTP/1.1 {} {}\r\n{}\r\n\r\n{}",status as u16, status_text,content_length ,content);
         response
     }
 
@@ -153,6 +182,9 @@ impl HteaPot {
         }
         let remaining_lines: Vec<&str>  = lines.collect();
         let body = remaining_lines.join("");
+        let body = body.trim().trim_end();
+        //remove all traling zero bytes
+        let body = body.trim_matches(char::from(0));
         let mut args: HashMap<String, String> = HashMap::new();
         //remove http or https from the path
         if path.starts_with("http://") {
@@ -212,3 +244,25 @@ impl HteaPot {
         }
     }
 }
+
+
+#[cfg(test)]
+
+#[test]
+fn test_http_parser() {
+    let request = "GET / HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: curl/7.68.0\r\nAccept: */*\r\n\r\n";
+    let parsed_request = HteaPot::request_parser(request);
+    assert_eq!(parsed_request.method, HttpMethod::GET);
+    assert_eq!(parsed_request.path, "/");
+    assert_eq!(parsed_request.args.len(), 0);
+    assert_eq!(parsed_request.headers.len(), 3);
+    assert_eq!(parsed_request.body, "");
+}
+
+#[test]
+fn test_http_response_maker() {
+    let response = HteaPot::response_maker(HttpStatus::IAmATeapot, "Hello, World!");
+    let expected_response = "HTTP/1.1 418 I'm a teapot\r\nContent-Length: 13\r\n\r\nHello, World!";
+    assert_eq!(response, expected_response);
+}
+

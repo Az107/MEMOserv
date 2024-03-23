@@ -1,6 +1,6 @@
 [package]
 name = "memodb/memoserv"
-version = "0.1.11"
+version = "0.1.12"
 description = "Just a memodb server"
 readme = "README.md"
 wasmer-extra-flags = "--net --enable-threads --enable-bulk-memory"

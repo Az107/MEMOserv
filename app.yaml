@@ -2,5 +2,5 @@
 kind: wasmer.io/App.v0
 name: memoserv
 app_id: da_zRLmILtvUxy2
-package: memodb/memoserv@0.1.11
+package: memodb/memoserv@0.1.12
 debug: true

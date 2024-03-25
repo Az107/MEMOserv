@@ -4,9 +4,9 @@
 // The Document will be a HashMap<String, DataType> 
 
 use uuid::Uuid;
-use std::{borrow::BorrowMut, collections::HashMap};
+use std::collections::HashMap;
 use super::data_type::DataType;
-use serde_json::{Result, Value};
+use serde_json::Value;
 
 const ID: &str = "ID";
 
@@ -160,9 +160,15 @@ impl Collection {
     self.data.iter().position(|x| x.get(ID).unwrap() == &id).unwrap()
   }
 
-  pub fn get_all(&self) -> &Vec<Document> {
-    &self.data
-    
+  pub fn get_all(&self,limit: usize, offset: usize) -> Vec<Document> {
+    if limit == 0 {
+      return self.data.clone()
+    }
+    // let limit = limit+offset;
+    // if limit > self.data.len() {
+    //   return self.data[offset..].to_vec()
+    // }
+    self.data[offset..limit].to_vec()
    }
 
   fn _find_by_key(&self, key: &str) -> Vec<&Document> {

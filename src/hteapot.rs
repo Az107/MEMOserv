@@ -7,6 +7,9 @@
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::sync::Arc;
+use std::thread;
+use rayon::ThreadPoolBuilder;
 
 #[derive(Debug)]
 #[derive(PartialEq)]
@@ -127,7 +130,7 @@ impl HteaPot {
     }
 
     // Start the server
-    pub fn listen(&self, action: impl Fn(HttpRequest) -> String ){
+    pub fn listen(&self, action: impl Fn(HttpRequest) -> String + Send + Sync + 'static ){
         let addr = format!("{}:{}", self.address, self.port);
         let listener = TcpListener::bind(addr);
         let listener = match listener {
@@ -137,13 +140,16 @@ impl HteaPot {
                 return;
             }
         };
+        let action_clone = Arc::new(action);
         for stream in listener.incoming() {
             match stream {
                  Ok(stream) => {
-                //     thread::spawn(move || {
-                //         HteaPot::handle_client(stream);
-                //     });
-                    self.handle_client(stream, &action)
+                    let action_clone = action_clone.clone();
+                    thread::spawn(move || {
+                                HteaPot::handle_client(stream, |req| {
+                                    action_clone(req)
+                                });
+                    });
    
                 }
                 Err(e) => {
@@ -203,8 +209,9 @@ impl HteaPot {
         }
 
         if path.contains('?') {
-            let mut parts = path.split('?');
-            let path = parts.next().unwrap();
+            let path_clone = path.clone();
+            let mut parts = path_clone.split('?');
+            path = parts.next().unwrap().to_string();
             let query = parts.next().unwrap();
             let query_parts: Vec<&str> = query.split('&').collect();
             for part in query_parts {
@@ -225,7 +232,7 @@ impl HteaPot {
     }
 
     // Handle the client when a request is received
-    fn handle_client(&self, mut stream: TcpStream , action: impl Fn(HttpRequest) -> String ) {
+    fn handle_client(mut stream: TcpStream , action: impl Fn(HttpRequest) -> String ) {
         let mut buffer = [0; 1024];
         stream.read(&mut buffer).unwrap(); //TODO: handle the error
         let request_buffer = String::from_utf8_lossy(&buffer);
@@ -233,7 +240,6 @@ impl HteaPot {
         println!("Received request: \n{} {}\n\n", request.method.to_str(), request.path);
         //let response = Self::response_maker(HttpStatus::IAmATeapot, "Hello, World!");
         let response = action(request);
-        println!("Sending response: \n{}", response);
         let r = stream.write(response.as_bytes()); 
         if r.is_err() {
             eprintln!("Error: {}", r.err().unwrap());

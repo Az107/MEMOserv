@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::sync::Mutex;
 mod engine;
 mod memodb;
 mod hteapot;
@@ -18,11 +18,12 @@ fn main() {
             Err(_) => DEFAULT_PORT.to_string(),
     };
     let teapot = HteaPot::new(&addr, port.parse().unwrap());
-    let engine = RefCell::new(Engine::new());
-    engine.borrow_mut().init_mock_data();
+    let engine = Mutex::new(Engine::new());
+    engine.lock().unwrap().init_mock_data();
     println!("Starting server...");
     println!("Listening on {}:{}...", addr, port);
-    teapot.listen( |request| {
-        engine.borrow_mut().process(request)
+    teapot.listen( move|request| {
+        let mut engine = engine.lock().unwrap();
+        engine.process(request)
     });
 }

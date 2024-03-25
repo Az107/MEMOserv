@@ -63,12 +63,12 @@ impl Engine {
     }
   }
 
-  fn get_all_documents(&mut self, collection_name: String) -> String {
+  fn get_all_documents(&mut self, collection_name: String,limit: usize, offset: usize) -> String {
     let collection = self.db.get_collection(collection_name);
     match collection {
         Some(collection) => {
             let mut body = String::from("[");
-            let documents = collection.get_all();
+            let documents = collection.get_all(limit, offset);
             for document in documents {
                 let result = document.to_json();
                 body.push_str(&result);
@@ -168,14 +168,16 @@ impl Engine {
             let d = document_name.as_str();
             match d {
                 "all" => {
-                    self.get_all_documents(collection_name)
+                    let limit = request.args.get("limit").unwrap_or(&"0".to_string()).parse::<usize>().unwrap();
+                    let offset = request.args.get("offset").unwrap_or(&"0".to_string()).parse::<usize>().unwrap();
+                    self.get_all_documents(collection_name,limit, offset)
                 }
                 "find" => {
                     println!("args: {:?}", request.args);
                     self.find(collection_name, request.args)
                 }
                 _ => {
-                    let id = path[2].parse::<Uuid>();
+                    let id = document_name.parse::<Uuid>();
                     match id {
                         Ok(id) => {
                             self.get_document_by_id(collection_name, id)

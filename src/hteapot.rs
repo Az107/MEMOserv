@@ -240,13 +240,10 @@ impl HteaPot {
         loop {
             let mut buffer = [0; 1024];
             stream.read(&mut buffer).unwrap_or_default();
-            println!("first: {} last: {}", buffer[0], buffer.last().unwrap() );
-            println!("size: {}", buffer.len());
             if buffer[0] == 0 {break};
             let partial_request_buffer = String::from_utf8_lossy(&buffer).to_string();
             request_buffer.push_str(&partial_request_buffer);
-            println!("last: {}", partial_request_buffer.get(1020..1024).unwrap_or_default());
-            if partial_request_buffer.ends_with("\r\n") || *buffer.last().unwrap() == 0  {break;}
+            if *buffer.last().unwrap() == 0 {break;}
         }
         
         let request = Self::request_parser(&request_buffer);

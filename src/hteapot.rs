@@ -221,7 +221,10 @@ impl HteaPot {
                 args.insert(key, value);
             }
         }
-
+        let body = body.trim_end().to_string();
+        let expected_size = headers.get("Content-Length").unwrap_or(&"-1".to_string()).parse::<i32>().unwrap();
+        let body_size = body.len();
+        println!("expected: {}\nrecived: {}",expected_size,body_size);
         HttpRequest {
             method: HttpMethod::from_str(method),
             path: path.to_string(),
@@ -233,9 +236,19 @@ impl HteaPot {
 
     // Handle the client when a request is received
     fn handle_client(mut stream: TcpStream , action: impl Fn(HttpRequest) -> String ) {
-        let mut buffer = [0; 1024];
-        stream.read(&mut buffer).unwrap(); //TODO: handle the error
-        let request_buffer = String::from_utf8_lossy(&buffer);
+        let mut request_buffer: String = String::new();
+        loop {
+            let mut buffer = [0; 1024];
+            stream.read(&mut buffer).unwrap_or_default();
+            println!("first: {} last: {}", buffer[0], buffer.last().unwrap() );
+            println!("size: {}", buffer.len());
+            if buffer[0] == 0 {break};
+            let partial_request_buffer = String::from_utf8_lossy(&buffer).to_string();
+            request_buffer.push_str(&partial_request_buffer);
+            println!("last: {}", partial_request_buffer.get(1020..1024).unwrap_or_default());
+            if partial_request_buffer.ends_with("\r\n") || *buffer.last().unwrap() == 0  {break;}
+        }
+        
         let request = Self::request_parser(&request_buffer);
         println!("Received request: \n{} {}\n\n", request.method.to_str(), request.path);
         //let response = Self::response_maker(HttpStatus::IAmATeapot, "Hello, World!");

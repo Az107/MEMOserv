@@ -1,78 +1,79 @@
-# Guía de Uso de MEMOserv
+# MEMOserv Usage Guide
 
-MEMOserv es un servidor de base de datos que utiliza el motor de base de datos memodb. A continuación, se detallan las operaciones básicas que puedes realizar utilizando este servidor a través de HTTP.
+MEMOserv is a database server that uses the memodb database engine. Here are the basic operations you can perform using this server over HTTP.
 
-## Crear una colección
+## Create a collection
 
-Para crear una nueva colección, realiza una solicitud POST a la ruta /collection_name. Si la colección se crea con éxito, recibirás un estado HTTP 201 (Created). En caso de que la colección ya exista, recibirás un estado HTTP 304 (Not Modified).
+To create a new collection, make a POST request to the path /collection_name. If the collection is created successfully, you will receive an HTTP 201 (Created) status. In case the collection already exists, you will receive an HTTP 304 (Not Modified) status.
 
 ```http
 GET http://localhost:3000/usuarios
 ```
 
-## Agregar un documento a una colección
+## Add a document to a collection
 
-Para agregar un nuevo documento a una colección, realiza una solicitud POST a la ruta /collection_name. Debes incluir el documento como JSON en el cuerpo de la solicitud. Si el documento se agrega correctamente, recibirás un estado HTTP 201 (Created) junto con el ID del nuevo documento.
+To add a new document to a collection, make a POST request to the /collection_name path. You must include the document as JSON in the body of the request. If the document is successfully added, you will receive an HTTP 201 (Created) status along with the ID of the new document.
 
 ```http
 POST http://localhost:3000/usuarios
 Content-Type: application/json
 
 {
-  "nombre": "Juan",
-  "apellido": "Pérez",
-  "edad": 30
+  “first name”: “John”,
+  “last name”: “Perez”,
+  “age”: 30
 }
 ```
 
-## Obtener la lista de todas las colecciones
+## Get the list of all collections
 
-Para obtener una lista de todas las colecciones, realiza una solicitud GET a la ruta /. Recibirás un estado HTTP 200 (OK) junto con la lista de colecciones.
+To get a list of all collections, make a GET request to the path /. You will receive an HTTP 200 (OK) status along with the list of collections.
 
 ```http
 GET http://localhost:3000/
 ```
 
 
-## Obtener todos los documentos de una colección
+## Get all documents in a collection
 
-Para obtener todos los documentos de una colección específica, realiza una solicitud GET a la ruta /collection_name/all. Recibirás un estado HTTP 200 (OK) junto con una lista de todos los documentos en la colección.
+To get all documents in a specific collection, make a GET request to the path /collection_name/all. You will receive an HTTP 200 (OK) status along with a list of all documents in the collection.
   
 ```http
 GET http://localhost:3000/usuarios/all
 ```
 
-## Obtener un documento por ID
+## Get a document by ID
 
-Para obtener un documento específico por su ID, realiza una solicitud GET a la ruta /collection_name/id. Recibirás un estado HTTP 200 (OK) junto con el documento solicitado. En caso de que el documento no se encuentre, recibirás un estado HTTP 404 (Not Found).
+To get a specific document by its ID, make a GET request to the path /collection_name/id. You will receive an HTTP 200 (OK) status along with the requested document. In case the document is not found, you will receive an HTTP 404 (Not Found) status.
 
 ```http
 GET http://localhost:3000/usuarios/1
 ```
 
-## Buscar documentos en una colección
+## Search for documents in a collection
 
-Para buscar documentos en una colección basándote en ciertos criterios, realiza una solicitud GET a la ruta /collection_name/find. Debes incluir los criterios de búsqueda como parámetros de consulta en la URL.
+To search for documents in a collection based on certain criteria, make a GET request to the path /collection_name/find. You must include the search criteria as query parameters in the URL.
 
 ```http
 GET http://localhost:3000/usuarios/find?nombre=Juan
 ```
 
-## Eliminar una colección
+## Delete a collection
 
-Para eliminar una colección, realiza una solicitud DELETE a la ruta /collection_name. Asegúrate de incluir un encabezado "amisure" con el valor "yes" para confirmar la eliminación. Recibirás un estado HTTP 200 (OK) si la colección se elimina con éxito.
+To delete a collection, make a DELETE request to the /collection_name path. Be sure to include an “amisure” header with the value “yes” to confirm the deletion. You will receive an HTTP 200 (OK) status if the collection is successfully deleted.
 
 ```http
 DELETE http://localhost:3000/usuarios
 amisure: yes
 ```
 
-## Eliminar un documento
 
-Para eliminar un documento específico, realiza una solicitud DELETE a la ruta /collection_name/id. Recibirás un estado HTTP 200 (OK) si el documento se elimina correctamente.
+## Delete a document
+
+To delete a specific document, make a DELETE request to the /collection_name/id path. You will receive an HTTP 200 status (OK) if the document is successfully deleted.
 
 > 
-> **Nota:** no es necesario incluir un encabezado "amisure" para confirmar la eliminación de un documento. Es aconsejable no usarlo para evitar la eliminación accidental de colecciones en caso de error al crear la solicitud.
+> **Note:** it is not necessary to include an “amisure” header to confirm the deletion of a document. It is advisable not to use it to avoid accidental deletion of collections in case of error when creating the request.
 >
 
 
@@ -81,8 +82,6 @@ DELETE http://localhost:3000/usuarios/1
 ```
 
 
-
-----
 ____
 
-¡Ahora estás listo para comenzar a utilizar MEMOserv para gestionar tus datos de manera eficiente a través de HTTP!
+Now you're ready to start using MEMOserv to manage your data efficiently over HTTP!

@@ -74,7 +74,7 @@ impl Engine {
                 body.push_str(&result);
                 body.push_str(",");
             }
-            body.pop();
+            if body.ends_with(',') { body.pop(); }
             body.push_str("]");
             HteaPot::response_maker(HttpStatus::OK, &body)
         }

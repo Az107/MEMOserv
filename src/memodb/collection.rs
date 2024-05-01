@@ -182,7 +182,8 @@ impl Collection {
   pub fn find(&self, args: HashMap<String, DataType>) -> Vec<&Document> {
     let mut result = Vec::new();
     for (key, value) in args.iter() {
-      if key == ID {
+      let is_id = value.to_string().parse::<Uuid>();
+      if key == ID && is_id.is_ok() {
         let id = value.to_id();
         let index = self.id_table.get(&id);
         match index {

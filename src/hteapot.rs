@@ -169,21 +169,30 @@ impl HteaPot {
     }
 
     // Parse the request
-    pub fn request_parser(request: &str) -> HttpRequest {
+    pub fn request_parser(request: &str) -> Result<HttpRequest,&str> {
         let mut lines = request.lines();
-        let first_line = lines.next().unwrap();
+        let first_line = lines.next();
+        if first_line.is_none() {return Err("No first line");}
+        let first_line = first_line.unwrap();
         let mut words = first_line.split_whitespace();
-        let method = words.next().unwrap();
-        let mut path = words.next().unwrap().to_string();
+        let method = words.next();
+        if method.is_none() {return Err("Invalid method");}
+        let method = method.unwrap();
+        
+        let  path = words.next();
+        if path.is_none() {return Err("No first line");}
+        let mut path = path.unwrap().to_string();
         let mut headers: HashMap<String, String> = HashMap::new();
         loop {
-            let line = lines.next().unwrap();
+            let line = lines.next();
+            if line.is_none() {return Err("Invalid request");}
+            let line = line.unwrap();
             if line.is_empty() {
                 break;
             }
             let mut parts = line.split(": ");
             let key = parts.next().unwrap().to_string();
-            let value = parts.next().unwrap();
+            let value = parts.next().unwrap_or_default();
             headers.insert(key, value.to_string());
         }
         let remaining_lines: Vec<&str>  = lines.collect();
@@ -225,13 +234,13 @@ impl HteaPot {
         let expected_size = headers.get("Content-Length").unwrap_or(&"-1".to_string()).parse::<i32>().unwrap();
         let body_size = body.len();
         println!("expected: {}\nrecived: {}",expected_size,body_size);
-        HttpRequest {
+        Ok(HttpRequest {
             method: HttpMethod::from_str(method),
             path: path.to_string(),
             args: args,
             headers: headers,
             body: body.trim_end().to_string(),
-        }
+        })
     }
 
     // Handle the client when a request is received
@@ -247,9 +256,18 @@ impl HteaPot {
         }
         
         let request = Self::request_parser(&request_buffer);
-        println!("Received request: \n{} {}\n\n", request.method.to_str(), request.path);
+        let response = match request {
+            Ok(request) => {
+                println!("Received request: \n{} {}\n\n", request.method.to_str(), request.path);
+                let response = action(request);
+                response
+            },
+            Err(error) => {
+                eprintln!("Error parsing: {}", error);
+                HteaPot::response_maker(HttpStatus::InternalServerError, "Internal server error")
+            }
+        };
         //let response = Self::response_maker(HttpStatus::IAmATeapot, "Hello, World!");
-        let response = action(request);
         let r = stream.write(response.as_bytes()); 
         if r.is_err() {
             eprintln!("Error: {}", r.err().unwrap());
@@ -268,6 +286,8 @@ impl HteaPot {
 fn test_http_parser() {
     let request = "GET / HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: curl/7.68.0\r\nAccept: */*\r\n\r\n";
     let parsed_request = HteaPot::request_parser(request);
+    assert!(parsed_request.is_ok());
+    let parsed_request = parsed_request.unwrap();
     assert_eq!(parsed_request.method, HttpMethod::GET);
     assert_eq!(parsed_request.path, "/");
     assert_eq!(parsed_request.args.len(), 0);

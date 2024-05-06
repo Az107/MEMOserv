@@ -4,11 +4,11 @@
 // The engine will have a MEMOdb instance to store the data
 
 use std::collections::HashMap;
-use uuid::{uuid, Uuid};
+use uuid::{Uuid};
 
 use crate::memodb::data_type::DataType;
 use crate::{doc, memodb::MEMOdb};
-use crate::memodb::collection::{self, Document, DocumentJson};
+use crate::memodb::collection::{Document, DocumentJson};
 use crate::hteapot::{HteaPot, HttpMethod, HttpRequest};
 use crate::hteapot::HttpStatus;
 
@@ -210,10 +210,16 @@ impl Engine {
                 match collection {
                     Some(collection) => {
                         println!("Request body: {}", request.body);
-                        let document: Document = DocumentJson::from_json(&request.body);
-                        let id = collection.add(document);
-                        let result = format!("{{\"id\":{}}}", id);
-                        HteaPot::response_maker(HttpStatus::Created, &result)
+                        let document = DocumentJson::from_json(&request.body);
+                        match document {
+                            Ok(document) => {
+                                let id = collection.add(document);
+                                let result = format!("{{\"id\":{}}}", id);
+                                HteaPot::response_maker(HttpStatus::Created, &result)
+                            },
+                            Err(err) =>  HteaPot::response_maker(HttpStatus::BadRequest, err)
+                        }
+         
                     }
                     None => {
                         HteaPot::response_maker(HttpStatus::NotFound, "Not Found")
@@ -250,7 +256,9 @@ impl Engine {
             if collection_name.is_some() && document_name.is_some() {
                 let collection_name  = collection_name.unwrap();
                 let document_name = document_name.unwrap();
-                let new_document: Document = DocumentJson::from_json(&request.body);
+                let new_document = DocumentJson::from_json(&request.body);
+                if new_document.is_err() { return HteaPot::response_maker(HttpStatus::BadRequest, "Bad request"); }
+                let new_document = new_document.unwrap();
                 let collection = self.db.get_collection(collection_name);
                 if collection.is_none() {return HteaPot::response_maker(HttpStatus::NotFound, "Collection not found"); }
                 let collection = collection.unwrap();

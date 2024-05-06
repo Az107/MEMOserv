@@ -22,7 +22,7 @@ pub trait DocumentStruct {
 
 pub trait DocumentJson {
   fn to_json(&self) -> String;
-  fn from_json(json: &str) -> Self;
+  fn from_json(json: &str) -> Result<Self,&str> where Self: Sized ;
 }
 
 impl DocumentJson for Document {
@@ -40,10 +40,15 @@ impl DocumentJson for Document {
     json.to_string()
   }
 
-  fn from_json(json: &str) -> Self {
-      let v: Value = serde_json::from_str(json).unwrap();
+  fn from_json(json: &str) -> Result<Self,&str> {
       let mut document = Document::new();
-      for (key, value) in v.as_object().unwrap() {
+      let v: Result<Value, serde_json::Error> = serde_json::from_str(json);
+      if v.is_err() {return Err("Invalid JSON");}
+      let v = v.unwrap();
+      let obj = v.as_object();
+      if obj.is_none() {return Err("Invalid JSON");}
+      let obj = obj.unwrap();
+      for (key, value) in obj {
         let value: Value = value.clone();
         if key == ID {
           let value_is_string = value.is_string();
@@ -52,7 +57,7 @@ impl DocumentJson for Document {
             document.insert(key.to_string(), DataType::Id(id.unwrap()));
           } else {
             match value {
-              Value::Number(n) => document.insert("id".to_string(), DataType::Number(n.as_i64().unwrap() as i32)),
+              Value::Number(n) => document.insert("id".to_string(), DataType::Number(n.as_i64().unwrap())),
               Value::String(s) => document.insert("id".to_string(), DataType::Text(s)),
               Value::Bool(b) => document.insert("id".to_string(), DataType::Boolean(b)),
               _ => document.insert("id".to_string(), DataType::Text("".to_string()))
@@ -60,7 +65,7 @@ impl DocumentJson for Document {
           }
         } else {
           match value {
-            Value::Number(n) => document.insert(key.to_string(), DataType::Number(n.as_i64().unwrap() as i32)),
+            Value::Number(n) => document.insert(key.to_string(), DataType::Number(n.as_i64().unwrap())),
             Value::String(s) => document.insert(key.to_string(), DataType::Text(s)),
             Value::Bool(b) => document.insert(key.to_string(), DataType::Boolean(b)),
             _ => document.insert(key.to_string(), DataType::Text("".to_string()))
@@ -68,7 +73,7 @@ impl DocumentJson for Document {
         }
       }
   
-    document
+    Ok(document)
   
   }
 }

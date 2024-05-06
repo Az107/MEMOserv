@@ -10,7 +10,7 @@ use super::collection::{Document, DocumentJson};
 pub enum DataType {
   Id(Uuid),
   Text(String),
-  Number(i32),
+  Number(i64),
   Boolean(bool),
   Array(Vec<DataType>),
   Document(Document),
@@ -70,7 +70,13 @@ impl DataType {
       DataType::Array(array)
     } else if json.starts_with('{') {
       let document = Document::from_json(json);
-      DataType::Document(document)
+      match document {
+      Ok(document) => DataType::Document(document),
+      Err(err) => {
+        eprintln!("Error: {}",err);
+        DataType::Document(Document::new())
+      }
+      }
     } else if json.starts_with('\"') {
       DataType::Text(json[1..json.len() - 1].to_string())
     } else if json == "true" {
@@ -78,7 +84,7 @@ impl DataType {
     } else if json == "false" {
       DataType::Boolean(false)
     } else {
-      match json.parse::<i32>() {
+      match json.parse::<i64>() {
         Ok(number) => DataType::Number(number),
         Err(_) => DataType::Text(json.to_string()),
       }
@@ -97,7 +103,7 @@ impl DataType {
       _ => panic!("Not a Text"),
     }
   }
-  pub fn to_number(&self) -> i32 {
+  pub fn to_number(&self) -> i64 {
     match self {
       DataType::Number(number) => *number,
       _ => panic!("Not a Number"),
@@ -172,8 +178,8 @@ impl From<&str> for DataType {
   }
 }
 
-impl From<i32> for DataType {
-  fn from(value: i32) -> Self {
+impl From<i64> for DataType {
+  fn from(value: i64) -> Self {
     DataType::Number(value)
   }
 }

@@ -9,7 +9,7 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::Arc;
 use std::thread;
-use rayon::ThreadPoolBuilder;
+
 
 #[derive(Debug)]
 #[derive(PartialEq)]
@@ -179,7 +179,7 @@ impl HteaPot {
         if method.is_none() {return Err("Invalid method");}
         let method = method.unwrap();
         
-        let  path = words.next();
+        let path = words.next();
         if path.is_none() {return Err("No first line");}
         let mut path = path.unwrap().to_string();
         let mut headers: HashMap<String, String> = HashMap::new();

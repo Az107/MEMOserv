@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::Arc;
-use std::thread;
-
+use std::thread::{self, JoinHandle};
+use rayon::ThreadPoolBuilder;
 
 #[derive(Debug)]
 #[derive(PartialEq)]
@@ -114,6 +114,7 @@ pub struct HttpRequest {
 pub struct HteaPot {
     port: u16,
     address: String,
+    handles: Vec<JoinHandle<()>>
     // this will store a map from path to their actions
     // path_table: HashMap<HttpMethod, HashMap<String, HashMap<HttpMethod, fn(HttpRequest) -> String>>>,
 }
@@ -125,12 +126,13 @@ impl HteaPot {
         HteaPot {
             port: port,
             address: address.to_string(),
+            handles: Vec::new()
             // path_table: HashMap::new(),
         }
     }
 
     // Start the server
-    pub fn listen(&self, action: impl Fn(HttpRequest) -> String + Send + Sync + 'static ){
+    pub fn listen(&mut self, action: impl Fn(HttpRequest) -> String + Send + Sync + 'static ){
         let addr = format!("{}:{}", self.address, self.port);
         let listener = TcpListener::bind(addr);
         let listener = match listener {
@@ -145,11 +147,12 @@ impl HteaPot {
             match stream {
                  Ok(stream) => {
                     let action_clone = action_clone.clone();
-                    thread::spawn(move || {
+                    let handle: JoinHandle<()> = thread::spawn(move || {
                                 HteaPot::handle_client(stream, |req| {
                                     action_clone(req)
                                 });
-                    });
+                            });
+                    self.handles.push(handle);
    
                 }
                 Err(e) => {

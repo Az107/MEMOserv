@@ -17,7 +17,7 @@ fn main() {
             Ok(val) => val,
             Err(_) => DEFAULT_PORT.to_string(),
     };
-    let teapot = HteaPot::new(&addr, port.parse().unwrap());
+    let mut teapot = HteaPot::new(&addr, port.parse().unwrap());
     let engine = Mutex::new(Engine::new());
     engine.lock().unwrap().init_mock_data();
     println!("Starting server...");

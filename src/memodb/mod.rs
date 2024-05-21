@@ -69,7 +69,7 @@ mod tests {
 
     struct User {
         name: String,
-        age: i32,
+        age: i64,
     }
 
     impl DocumentStruct for User {
@@ -77,7 +77,7 @@ mod tests {
             doc!{"name" => self.name.clone(), "age" => self.age}
         }
 
-        fn from_document(document: &Document) -> Self {
+        fn from_document(document: &Document) -> Self { 
             User {
                 name: document.get("name").unwrap().to_string(),
                 age: document.get("age").unwrap().to_number()

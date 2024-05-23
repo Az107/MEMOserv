@@ -4,6 +4,10 @@
 // The Binary tree will be used to index the documents
 // and provide a fast search
 
+use std::collections::HashMap;
+
+use super::data_type::DataType;
+
 
 struct BinaryNode {
     value: u64,
@@ -83,10 +87,55 @@ impl BinaryTree {
     }
 }
 
+fn fnv1(s: &str) -> u64 {
+
+    const FNV_OFFSET_BASIS: u64 = 0xcbf29ce484222325;
+    const FNV_PRIME: u64 = 0x100000001b3;
+
+    let mut hash: u64 = FNV_OFFSET_BASIS;
+
+    for byte in s.as_bytes() {
+        hash = hash.wrapping_mul(FNV_PRIME); 
+        hash ^= *byte as u64;
+    }
+
+    hash
+
+
+}
+
+struct Finder {
+    forest: HashMap<String,BinaryTree>,
+}
+
+impl Finder {
+    fn new() -> Self {
+        Finder {
+            forest: HashMap::new()
+        }
+    }
+
+    fn add(&mut self, key: &str, value: DataType, index: u64) {
+        let value = value.to_string();
+        let value = fnv1(value.as_str());
+        let tree = self.forest.get_mut(key);
+        match tree {
+            Some(tree) => { tree.add(value, index); },
+            None => {
+                let mut tree = BinaryTree::new();
+                tree.add(value, index);
+                self.forest.insert(key.to_string(), tree);
+
+            }
+        }
+    }
+}
 
 
 #[cfg(test)]
 mod test {
+    use crate::memodb::finder::fnv1;
+
     use super::BinaryTree;
 
 
@@ -125,5 +174,12 @@ mod test {
         assert!(!tree.find(10).unwrap().is_empty());
         assert!(tree.find(10).unwrap().len() == 1);
         assert!(tree.find(15).is_none());
+    }
+
+
+    #[test]
+    fn test_fnv1() {
+        assert!(fnv1("a") == 12638153115695167422);
+        assert!(fnv1("thisIsaLongStringToTestTheHashFunction") == 4027512090620836661)
     }
 }

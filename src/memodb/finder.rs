@@ -5,21 +5,21 @@
 // and provide a fast search
 
 use std::collections::HashMap;
-
+use uuid::Uuid;
 use super::data_type::DataType;
 
 
 struct BinaryNode {
     value: u64,
-    pointers: Vec<u64>,
+    pointers: Vec<Uuid>,
     l: Option<Box<BinaryNode>>, // value > l.value
     r: Option<Box<BinaryNode>> // value < r.value
 }
 
 impl BinaryNode {
-    fn new(value: u64, pointer: u64) -> Self {
+    fn new(value: u64, id: Uuid) -> Self {
         let mut pointers = Vec::new();
-        pointers.push(pointer);
+        pointers.push(id);
         BinaryNode {
             value,
             pointers: pointers,
@@ -28,7 +28,7 @@ impl BinaryNode {
         }
     }
 
-    fn find(&self, value: u64) -> Option<Vec<u64>> {
+    fn find(&self, value: u64) -> Option<Vec<Uuid>> {
         if value < self.value {
             return match &self.l {
                 Some(left) => left.find(value),
@@ -44,7 +44,7 @@ impl BinaryNode {
         }
     }
 
-    fn insert(&mut self, new_value: u64, index: u64) {
+    fn insert(&mut self, new_value: u64, index: Uuid) {
         if new_value < self.value {
             match self.l {
                 Some(ref mut left) => left.insert(new_value, index),
@@ -56,7 +56,9 @@ impl BinaryNode {
                 None => self.r = Some(Box::new(BinaryNode::new(new_value, index))),
             }
         } else {
-            self.pointers.push(index);
+            if !self.pointers.contains(&index) {
+                self.pointers.push(index);
+            }
         }
     }
 }
@@ -72,14 +74,14 @@ impl BinaryTree {
          }
     }
 
-    fn add(&mut self, v: u64, index: u64) {
+    fn add(&mut self, v: u64, index: Uuid) {
         match self.trunc {
             Some(ref mut node) => node.insert(v, index),
             None => self.trunc = Some(BinaryNode::new(v, index))
         }
     }
 
-    fn find(&self, value : u64) -> Option<Vec<u64>> {
+    fn find(&self, value : u64) -> Option<Vec<Uuid>> {
         match &self.trunc {
             Some(node) => node.find(value),
             None => None
@@ -104,18 +106,18 @@ fn fnv1(s: &str) -> u64 {
 
 }
 
-struct Finder {
+pub struct DataFinder {
     forest: HashMap<String,BinaryTree>,
 }
 
-impl Finder {
-    fn new() -> Self {
-        Finder {
+impl DataFinder {
+    pub fn new() -> Self {
+        DataFinder {
             forest: HashMap::new()
         }
     }
 
-    fn add(&mut self, key: &str, value: DataType, index: u64) {
+    pub fn add(&mut self, key: &str, value: DataType, index: Uuid) {
         let value = value.to_string();
         let value = fnv1(value.as_str());
         let tree = self.forest.get_mut(key);
@@ -129,11 +131,44 @@ impl Finder {
             }
         }
     }
+
+    pub fn find(&mut self, key: &str, value: &str) -> Option<Vec<Uuid>> {
+        let tree = self.forest.get(key);
+        if tree.is_none() {
+            return None
+        }
+        let tree = tree.unwrap();
+        let value = fnv1(value);
+
+        tree.find(value)
+    }
+
+
 }
+
+
+struct TextProcessor{
+    wordCound: HashMap<String,u64>
+}
+
+impl TextProcessor {
+    pub fn new() -> Self {
+        TextProcessor {
+            wordCound: HashMap::new()
+        }
+    }
+
+    pub fn addText(&mut self, text: String) {
+        let v: Vec<&str> = text.split(' ').collect();
+    }
+}
+
 
 
 #[cfg(test)]
 mod test {
+    use uuid::Uuid;
+
     use crate::memodb::finder::fnv1;
 
     use super::BinaryTree;
@@ -142,7 +177,7 @@ mod test {
     #[test]
     fn test_tree() {
         let mut tree = BinaryTree::new();
-        tree.add(5,0);
+        tree.add(5,Uuid::new_v4());
         assert!(tree.trunc.is_some());
         assert!(tree.trunc.unwrap().value == 5);
     }
@@ -150,8 +185,8 @@ mod test {
     #[test]
     fn test_tree_add() {
         let mut tree = BinaryTree::new();
-        tree.add(5,0);
-        tree.add(10,0);
+        tree.add(5,Uuid::new_v4());
+        tree.add(10,Uuid::new_v4());
         assert!(tree.trunc.is_some());
         assert!(tree.trunc.as_ref().unwrap().value == 5);
         assert!(tree.trunc.as_ref().unwrap().r.is_some());
@@ -163,10 +198,12 @@ mod test {
     #[test]
     fn test_tree_find() {
         let mut tree = BinaryTree::new();
-        tree.add(5,0);
-        tree.add(5,1);
-        tree.add(10,0);
-        tree.add(12,0);
+        tree.add(5,Uuid::new_v4());
+        let uno = Uuid::new_v4();
+        tree.add(5,uno);
+        tree.add(5,uno);
+        tree.add(10,Uuid::new_v4());
+        tree.add(12,Uuid::new_v4());
         assert!(tree.find(5).is_some());
         assert!(!tree.find(5).unwrap().is_empty());
         assert!(tree.find(5).unwrap().len() == 2);

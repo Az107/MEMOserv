@@ -9,6 +9,9 @@ pub mod collection;
 pub mod data_type;
 mod finder;
 use collection::Collection;
+use uuid::Uuid;
+
+use self::collection::Document;
 
 pub struct MEMOdb {
     pub version: &'static str,
@@ -32,6 +35,13 @@ impl MEMOdb {
             self.collections.push(collection);
             Ok(())
         }
+    }
+
+    pub fn get_document_by_id(&mut self,id: Uuid ) -> Option<&mut Document> {
+        for collection in self.collections.iter_mut() {
+            return collection.get(id);
+        }
+        None
     }
 
     pub fn get_collection(&mut self, name: String) -> Option<&mut Collection> {

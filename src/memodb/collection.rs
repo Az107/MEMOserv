@@ -5,7 +5,7 @@
 
 use uuid::Uuid;
 use std::collections::HashMap;
-use super::data_type::DataType;
+use super::{data_type::DataType, finder};
 use serde_json::Value;
 
 const ID: &str = "ID";
@@ -102,6 +102,7 @@ pub struct Collection {
   pub name: String,
   pub(crate) data: Vec<Document>,
   id_table: HashMap<Uuid, usize>,
+  dataFinder: finder::DataFinder
   //b_tree: BNode
 }
 
@@ -113,7 +114,8 @@ impl Collection {
       name: name,
       data: Vec::new(),
       id_table: HashMap::new(),
-      //b_tree: BNode::new(),
+      dataFinder: finder::DataFinder::new()
+
     }
   }
 
@@ -213,7 +215,7 @@ impl Collection {
     let index = self.id_table.get(&id);
     match index {
       Some(index) => self.data.get_mut(*index),
-      None => self.slow_get(id)
+      None => None // Or replace with self.get_slow 
     }
   }
 

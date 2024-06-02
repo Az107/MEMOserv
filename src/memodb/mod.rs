@@ -8,19 +8,81 @@
 pub mod collection;
 pub mod data_type;
 mod finder;
-use collection::Collection;
+use std::{fs, path::{Path, PathBuf}, str::FromStr, string};
+use serde_json::Value;
+use collection::{Collection, DocumentJson};
+
+
+const VERSION: &'static str  = "0.1.5";
 
 pub struct MEMOdb {
     pub version: &'static str,
+    pub path: String,
     collections: Vec<Collection>,
+
 }
 
 impl MEMOdb {
     pub fn new() -> Self {
         MEMOdb {
-            version: "0.1.5",
+            version: VERSION,
+            path: "./mem.json".to_string(),
             collections: Vec::new(),
         }
+    }
+
+    pub fn load(path: &str) -> Result<Self,&str> {
+        let contents = fs::read_to_string(path);
+        if contents.is_err() {
+            return Err("Error reading file");
+        }
+        let contents = contents.unwrap();
+        let mut collections = Vec::new();
+        let json = Value::from_str(contents.as_str());
+        if json.is_err() {
+            return Err("Error parsing file");
+        }
+        let json = json.unwrap();
+        let json = json.as_array();
+        if json.is_none() {
+            return Err("Error parsing file");
+        }
+        let json = json.unwrap();
+        for coll in json {
+            let coll = coll.as_str();
+            if coll.is_none() {
+                continue;
+            }
+            let coll = coll.unwrap();
+            let collection = Collection::from_json(coll);
+            if collection.is_err() {
+                continue;
+            }
+            collections.push(collection.unwrap());
+        }
+
+        Ok(MEMOdb {
+            version: VERSION,
+            collections: collections,
+            path: path.to_string()
+
+        })
+    }
+
+    pub fn dump(&self) -> Result<(), &str> {
+        let mut list = Vec::new();
+        for collection in self.collections.iter() {
+            list.push(collection.to_json_value());
+        }
+
+        let json = Value::Array(list);
+        let json = json.as_str();
+        if json.is_none() {
+            return Err("");
+        }
+        let json = json.unwrap();
+        fs::write(self.path.as_str(), json);
+        Ok(())
     }
 
     pub fn create_collection(&mut self, name: String) -> Result<(), &str>{

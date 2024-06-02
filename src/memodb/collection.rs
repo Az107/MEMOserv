@@ -3,6 +3,8 @@
 // The collection will store the documents in memory and provide a simple API to interact with them
 // The Document will be a HashMap<String, DataType> 
 
+use rayon::collections;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use std::collections::HashMap;
 use super::data_type::DataType;
@@ -20,13 +22,19 @@ pub trait DocumentStruct {
   fn from_document(document: &Document) -> Self;
 }
 
-pub trait DocumentJson {
+pub trait DocumentJson: Sized {
   fn to_json(&self) -> String;
-  fn from_json(json: &str) -> Self;
+  fn to_json_value(&self) -> Value;
+  fn from_json(json: &str) -> Result<Self ,&str>;
 }
 
 impl DocumentJson for Document {
   fn to_json(&self) -> String {
+    
+    self.to_json_value().to_string()
+  }
+
+  fn to_json_value(&self) -> Value {
     let mut json = serde_json::json!({});
     for (key, value) in self.iter() {
       match value {
@@ -37,10 +45,10 @@ impl DocumentJson for Document {
         _ => json[key] = serde_json::json!("()")
       }
     }
-    json.to_string()
+    json
   }
 
-  fn from_json(json: &str) -> Self {
+  fn from_json(json: &str) -> Result<Self, &str> {
       let v: Value = serde_json::from_str(json).unwrap();
       let mut document = Document::new();
       for (key, value) in v.as_object().unwrap() {
@@ -68,7 +76,7 @@ impl DocumentJson for Document {
         }
       }
   
-    document
+    Ok(document)
   
   }
 }
@@ -100,7 +108,55 @@ pub struct Collection {
   //b_tree: BNode
 }
 
+impl DocumentJson for Collection {
+    fn to_json_value(&self) -> Value {
+        let mut json = serde_json::json!({});
+        json["name"] = serde_json::json!(self.name);
+        let mut jsondata = Vec::new();
+        for document in self.data.iter() {
+          jsondata.push(document.to_json_value())
+        }
+        json["data"] = serde_json::Value::Array(jsondata);
+        json
+    }
 
+    fn to_json(&self) -> String {
+        self.to_json_value().to_string()
+    }
+
+    fn from_json(json: &str) -> Result<Self,&str> {
+      let v: Value = serde_json::from_str(json).unwrap();
+      let obj =  v.as_object().unwrap();
+      let name = obj.get("name");
+      if name.is_none() {
+        return Err("()");
+      }
+      let name = name.unwrap().to_string();
+      let mut collection = Collection::new(name);
+      let data = obj.get("data");
+      if data.is_none() {
+        return Err("()");
+      }
+      let data = data.unwrap().as_array();
+      if data.is_none() {
+        return Err("Error converting data as array");
+      }
+      let data = data.unwrap();
+      for document in data {
+        let document = document.as_str();
+        if document.is_none() {
+          continue;
+        }
+        let document = document.unwrap();
+        let doc = Document::from_json(document);
+        if doc.is_err() {continue;}
+        let doc = doc.unwrap();
+        collection.add(doc);
+      }
+      return Ok(collection);
+      
+    }
+}
 
 impl Collection {
   pub fn new(name: String) -> Self {

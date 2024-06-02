@@ -70,7 +70,11 @@ impl DataType {
       DataType::Array(array)
     } else if json.starts_with('{') {
       let document = Document::from_json(json);
-      DataType::Document(document)
+      if document.is_err() {
+        return DataType::Document(Document::new());
+      } else {
+        return DataType::Document(document.unwrap());
+      }
     } else if json.starts_with('\"') {
       DataType::Text(json[1..json.len() - 1].to_string())
     } else if json == "true" {

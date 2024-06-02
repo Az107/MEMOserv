@@ -4,6 +4,7 @@
 // The engine will have a MEMOdb instance to store the data
 
 use std::collections::HashMap;
+use std::path::Path;
 use uuid::{uuid, Uuid};
 
 use crate::memodb::data_type::DataType;
@@ -21,9 +22,18 @@ pub struct Engine {
 impl Engine {
   pub fn new() -> Engine {
     Engine {
-      db: MEMOdb::new()
+      db:  if Path::new("./memo.json").exists() {
+        let db = MEMOdb::load("./memo.json");
+        if db.is_err() {
+            MEMOdb::new()
+        } else {
+            db.unwrap()
+        }
+      } else {
+        MEMOdb::new()
     }
   }
+}
 
   //TODO: remove this function, test only
   pub fn init_mock_data(&mut self) {
@@ -130,6 +140,11 @@ impl Engine {
     }
   }
 
+  pub fn dump(&self) -> Result<(),&str> {
+    let result = self.db.dump();
+    return result;
+  }
+
   //process the request and return the response
   pub fn process(&mut self, request: HttpRequest) -> String {
     let mut path = request.path.split("/").collect::<Vec<&str>>();
@@ -210,7 +225,11 @@ impl Engine {
                 match collection {
                     Some(collection) => {
                         println!("Request body: {}", request.body);
-                        let document: Document = DocumentJson::from_json(&request.body);
+                        let document = DocumentJson::from_json(&request.body);
+                        if document.is_err() {
+                            return HteaPot::response_maker(HttpStatus::BadRequest, "Bad document");
+                        }
+                        let document = document.unwrap();
                         let id = collection.add(document);
                         let result = format!("{{\"id\":{}}}", id);
                         HteaPot::response_maker(HttpStatus::Created, &result)
@@ -250,7 +269,11 @@ impl Engine {
             if collection_name.is_some() && document_name.is_some() {
                 let collection_name  = collection_name.unwrap();
                 let document_name = document_name.unwrap();
-                let new_document: Document = DocumentJson::from_json(&request.body);
+                let new_document = DocumentJson::from_json(&request.body);
+                if new_document.is_err() {
+                    return HteaPot::response_maker(HttpStatus::BadRequest, "Bad document");
+                }
+                let new_document = new_document.unwrap();
                 let collection = self.db.get_collection(collection_name);
                 if collection.is_none() {return HteaPot::response_maker(HttpStatus::NotFound, "Collection not found"); }
                 let collection = collection.unwrap();

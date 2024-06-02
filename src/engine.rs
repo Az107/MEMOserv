@@ -22,14 +22,17 @@ pub struct Engine {
 impl Engine {
   pub fn new() -> Engine {
     Engine {
-      db:  if Path::new("./memo.json").exists() {
+      db: if Path::new("./memo.json").exists() {
         let db = MEMOdb::load("./memo.json");
         if db.is_err() {
+            println!("File found but {}",db.err().unwrap());
             MEMOdb::new()
         } else {
+            println!("Load file");
             db.unwrap()
         }
       } else {
+        println!("File not found");
         MEMOdb::new()
     }
   }
@@ -42,6 +45,7 @@ impl Engine {
     collection.add(doc!{"name" => "John", "age" => 30});
     collection.add(doc!{"name" => "Jane", "age" => 25});
     collection.add(doc!{"name" => "Doe", "age" => 40});
+    self.db.dump();
   }
 
   //wrapper for MEMOdb functions
@@ -119,6 +123,7 @@ impl Engine {
   fn delete_collection(&mut self, collection_name: String) -> String {
     let collection = self.db.remove_collection(collection_name);
     let result = format!("{{\"collection\": \"{}\"}}", collection.name);
+    self.dump();
     HteaPot::response_maker(HttpStatus::OK, &result)
   }
 
@@ -132,6 +137,7 @@ impl Engine {
     match collection {
         Some(collection) => {
             collection.rm(id);
+            self.dump();
             HteaPot::response_maker(HttpStatus::OK, "OK")
         }
         None => {
@@ -214,6 +220,7 @@ impl Engine {
                 let result = self.db.create_collection(collection_name);
                 match result {
                     Ok(_) => {
+                        self.dump();
                         HteaPot::response_maker(HttpStatus::Created, "Created")
                     }, 
                     Err(_) => {
@@ -232,6 +239,7 @@ impl Engine {
                         let document = document.unwrap();
                         let id = collection.add(document);
                         let result = format!("{{\"id\":{}}}", id);
+                        self.dump();
                         HteaPot::response_maker(HttpStatus::Created, &result)
                     }
                     None => {
@@ -281,6 +289,7 @@ impl Engine {
                 if id.is_err() {return HteaPot::response_maker(HttpStatus::BadRequest, "Bad request"); };
                 let id = id.unwrap();
                 collection.update_document(id, new_document);
+                self.dump();
                 return HteaPot::response_maker(HttpStatus::OK, "Updated");
 
             } else {

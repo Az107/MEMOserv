@@ -26,7 +26,7 @@ impl MEMOdb {
     pub fn new() -> Self {
         MEMOdb {
             version: VERSION,
-            path: "./mem.json".to_string(),
+            path: "./memo.json".to_string(),
             collections: Vec::new(),
         }
     }
@@ -49,11 +49,8 @@ impl MEMOdb {
         }
         let json = json.unwrap();
         for coll in json {
+            let coll = coll.to_string();
             let coll = coll.as_str();
-            if coll.is_none() {
-                continue;
-            }
-            let coll = coll.unwrap();
             let collection = Collection::from_json(coll);
             if collection.is_err() {
                 continue;
@@ -71,16 +68,14 @@ impl MEMOdb {
 
     pub fn dump(&self) -> Result<(), &str> {
         let mut list = Vec::new();
+        println!("Dumping {} collections", self.collections.len());
         for collection in self.collections.iter() {
             list.push(collection.to_json_value());
         }
 
         let json = Value::Array(list);
+        let json = json.to_string();
         let json = json.as_str();
-        if json.is_none() {
-            return Err("");
-        }
-        let json = json.unwrap();
         fs::write(self.path.as_str(), json);
         Ok(())
     }

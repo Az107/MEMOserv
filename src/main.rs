@@ -19,11 +19,12 @@ fn main() {
     };
     let teapot = HteaPot::new(&addr, port.parse().unwrap());
     let engine = Mutex::new(Engine::new());
-    engine.lock().unwrap().init_mock_data();
+    //engine.lock().unwrap().init_mock_data();
     println!("Starting server...");
     println!("Listening on {}:{}...", addr, port);
     teapot.listen( move|request| {
         let mut engine = engine.lock().unwrap();
-        engine.process(request)
+        let result = engine.process(request);
+        result
     });
 }

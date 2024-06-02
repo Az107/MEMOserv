@@ -110,13 +110,16 @@ pub struct Collection {
 
 impl DocumentJson for Collection {
     fn to_json_value(&self) -> Value {
-        let mut json = serde_json::json!({});
-        json["name"] = serde_json::json!(self.name);
+        let mut json = serde_json::json!({
+          "name": self.name,
+          "data": []
+        });
         let mut jsondata = Vec::new();
         for document in self.data.iter() {
           jsondata.push(document.to_json_value())
         }
         json["data"] = serde_json::Value::Array(jsondata);
+        println!("col is {} , {}",json.is_object(), json.to_string().as_str());
         json
     }
 
@@ -131,7 +134,7 @@ impl DocumentJson for Collection {
       if name.is_none() {
         return Err("()");
       }
-      let name = name.unwrap().to_string();
+      let name = name.unwrap().to_string().replace("\"", "");
       let mut collection = Collection::new(name);
       let data = obj.get("data");
       if data.is_none() {
@@ -143,11 +146,8 @@ impl DocumentJson for Collection {
       }
       let data = data.unwrap();
       for document in data {
+        let document = document.to_string();
         let document = document.as_str();
-        if document.is_none() {
-          continue;
-        }
-        let document = document.unwrap();
         let doc = Document::from_json(document);
         if doc.is_err() {continue;}
         let doc = doc.unwrap();
